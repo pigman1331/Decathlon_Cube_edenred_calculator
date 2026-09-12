@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>迪卡儂即享券最佳付款計算機</title>
+<style>
+body{font-family:Arial,"Microsoft JhengHei",sans-serif;background:#f5f6f8;margin:0;padding:24px;color:#222}
+.wrap{max-width:1050px;margin:auto}.card{background:white;border-radius:14px;padding:22px;margin-bottom:18px;box-shadow:0 2px 10px #00000012}
+h1{margin-top:0}h2{font-size:19px;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+label{font-size:13px;color:#555;display:block;margin-bottom:5px}
+input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccd1d8;border-radius:8px;font-size:16px}
+.result{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.box{background:#f7f8fa;border-radius:10px;padding:14px}.big{font-size:25px;font-weight:bold}
+.good{background:#eef8f0}.warn{background:#fff7e8}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+th,td{padding:9px;border-bottom:1px solid #eee;text-align:right}th:first-child,td:first-child{text-align:left}
+.note{font-size:13px;color:#666;line-height:1.6}
+button{padding:10px 15px;border:0;border-radius:8px;cursor:pointer;background:#222;color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<h1>🚲 迪卡儂即享券最佳付款計算機</h1>
+<p class="note">輸入腳踏車價格、即享券面額/回饋、以及小樹點折抵限制，計算「買多少即享券＋結帳刷多少卡」最省。金額均以新台幣計。</p>
+<div class="grid">
+<div><label>商品總價</label><input id="price" type="number" value="80000" min="0"></div>
+<div><label>即享券單張面額</label><input id="voucher" type="number" value="3000" min="1"></div>
+<div><label>即享券實際售價（每張）</label><input id="vprice" type="number" value="3000" min="0"></div>
+<div><label>購買即享券回饋率 (%)</label><input id="vrate" type="number" value="3" step="0.1" min="0"></div>
+<div><label>小樹點折抵刷卡部分上限 (%)</label><input id="redeem" type="number" value="30" step="1" min="0" max="100"></div>
+<div><label>剩餘刷卡的信用卡回饋率 (%)</label><input id="crate" type="number" value="0.3" step="0.1" min="0"></div>
+</div>
+</div>
+
+<div class="card">
+<h2>計算結果</h2>
+<div class="result">
+<div class="box good"><div>最佳即享券張數</div><div class="big" id="bestN">-</div></div>
+<div class="box"><div>購買即享券面額</div><div class="big" id="bestV">-</div></div>
+<div class="box"><div>得到小樹點</div><div class="big" id="points">-</div></div>
+<div class="box"><div>結帳剩餘刷卡</div><div class="big" id="card">-</div></div>
+<div class="box"><div>小樹點實際折抵</div><div class="big" id="used">-</div></div>
+<div class="box good"><div>最終實際支出</div><div class="big" id="cashCost">-</div></div>
+<div class="box"><div>最後刷卡再取得小樹點</div><div class="big" id="futurePts">-</div></div>
+<div class="box good"><div>最終成本（扣未來點數）</div><div class="big" id="netCost">-</div></div>
+</div>
+<p class="note" id="explain"></p>
+</div>
+
+<div class="card">
+<h2>所有方案比較</h2>
+<table>
+<thead><tr><th>即享券張數</th><th>即享券面額</th><th>券實際支出</th><th>購券取得點數</th><th>刷卡金額</th><th>本次點數折抵</th><th>未來刷卡回饋</th><th>實際支出</th><th>扣未來點數後成本</th></tr></thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+
+<div class="card">
+<h2>費用計算邏輯</h2>
+<p class="note">
+<b>本次實際支出：</b> 即享券購買支出 ＋ 最後刷卡金額。<br>
+<b>本次可立即使用的點數：</b> 購買即享券所得到的小樹點，用來折抵最後刷卡部分。<br>
+<b>未來可用點數：</b> 最後一筆刷卡所產生的信用卡回饋，因為不能在同一筆交易立即折抵，所以不從「實際支出」扣除；計算器另提供「扣未來點數後成本」方便你比較長期實質成本。
+</p>
+<h2>使用方式</h2>
+<p class="note">
+1. 例如：商品 80,000、3,000 元券、每張售價 3,000、購券回饋 3%。<br>
+2. 如果券本身有折扣，例如 3,000 元券只賣 2,940 元，把「即享券實際售價」填 2,940。<br>
+3. 「小樹點折抵刷卡部分上限」填你的實際規則；如果沒有比例限制可填 100%。<br>
+4. 計算器會逐一測試可買的整數張數，避免只用連續數學公式而忽略「必須買整張券」。
+</p>
+</div>
+</div>
+<script>
+const ids=["price","voucher","vprice","vrate","redeem","crate"];
+ids.forEach(id=>document.getElementById(id).addEventListener("input",calc));
+function money(x){return Math.round(x).toLocaleString("zh-TW")+" 元"}
+function calc(){
+ let P=+price.value||0, V=+voucher.value||1, VP=+vprice.value||0;
+ let vr=(+vrate.value||0)/100, rr=(+redeem.value||0)/100, cr=(+crate.value||0)/100;
+ let rows=[], best=null;
+ let maxN=Math.ceil(P/V)+2;
+ for(let n=0;n<=maxN;n++){
+   let face=n*V, out=n*VP;
+   if(face>P && n>0) continue;
+   let pts=out*vr;
+   let remain=Math.max(0,P-face);
+   let use=Math.min(pts,remain*rr);
+   let card=remain-use;
+   let cb=card*cr;
+   // 購券時產生的點數可在本次結帳折抵；最後刷卡產生的點數只能之後使用。
+   // 因此「實際支出」不扣最後刷卡回饋；另列未來可用點數。
+   let cashCost=out+card;
+   let netCost=cashCost-cb;
+   let row={n,face,out,pts,remain,use,card,cb,cashCost,netCost};
+   rows.push(row);
+   if(!best || row.netCost<best.netCost) best=row;
+ }
+ bestN.textContent=best.n+" 張";
+ bestV.textContent=money(best.face);
+ points.textContent=best.pts.toFixed(0)+" 點";
+ card.textContent=money(best.card);
+ used.textContent=money(best.use);
+ cashCost.textContent=money(best.cashCost);
+ futurePts.textContent=best.cb.toFixed(0)+" 點";
+ netCost.textContent=money(best.netCost);
+ explain.innerHTML=`
+ <div style="font-size:15px;line-height:1.9">
+ <b>最佳方案計算：</b><br>
+ 即享券購買支出：＋${money(best.out)}<br>
+ 購車時即享券折抵：−${money(best.face)}<br>
+ 購券取得小樹點：＋${best.pts.toFixed(0)} 點<br>
+ 本次可使用小樹點：−${money(best.use)}<br>
+ 最後實際刷卡：＋${money(best.card)}<br>
+ 最後刷卡取得的小樹點：＋${best.cb.toFixed(0)} 點（<b>下次使用</b>）<br>
+ <hr>
+ <b>最終實際支出：</b> ${money(best.out)} ＋ ${money(best.card)} ＝ <b>${money(best.cashCost)}</b><br>
+ <b>若將未來可用小樹點計入：</b> ${money(best.cashCost)} − ${money(best.cb)} ＝ <b>${money(best.netCost)}</b>
+ </div>`;
+ tbody.innerHTML=rows.map(r=>`<tr${r.n===best.n?' style="font-weight:bold;background:#eef8f0"':''}>
+<td>${r.n}</td><td>${money(r.face)}</td><td>${money(r.out)}</td><td>${r.pts.toFixed(0)}</td>
+<td>${money(r.card)}</td><td>${money(r.use)}</td><td>${r.cb.toFixed(0)}</td><td>${money(r.cashCost)}</td><td>${money(r.netCost)}</td></tr>`).join("");
+}
+calc();
+</script>
+</body>
+</html>
