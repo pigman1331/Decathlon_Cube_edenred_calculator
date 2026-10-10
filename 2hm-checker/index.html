@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>二手寄賣收件查詢</title>
+<meta name="description" content="迪卡儂二手市集寄賣收件標準：輸入關鍵字查詢商品是否可收。">
+<style>
+:root{
+  --bg:#f4f6f9; --card:#fff; --text:#1c2430; --muted:#5f6b7a; --line:#dde2ea;
+  --brand:#0082c3; --brand-ink:#fff;
+  --ok:#1e8a4c; --ok-bg:#e5f5ec; --no:#c62f2f; --no-bg:#fbe9e9; --cond:#a86200; --cond-bg:#fff3dc;
+  --unk:#5f6b7a; --unk-bg:#eceff3;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11161d; --card:#1a212b; --text:#e6ebf2; --muted:#9aa6b5; --line:#2c3644;
+    --brand:#2aa3e0; --brand-ink:#04121b;
+    --ok:#5fd393; --ok-bg:#16301f; --no:#ff8080; --no-bg:#3a1a1a; --cond:#ffc15a; --cond-bg:#3a2c12;
+    --unk:#aab4c2; --unk-bg:#252d38;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11161d; --card:#1a212b; --text:#e6ebf2; --muted:#9aa6b5; --line:#2c3644;
+  --brand:#2aa3e0; --brand-ink:#04121b;
+  --ok:#5fd393; --ok-bg:#16301f; --no:#ff8080; --no-bg:#3a1a1a; --cond:#ffc15a; --cond-bg:#3a2c12;
+  --unk:#aab4c2; --unk-bg:#252d38;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+header{background:var(--brand);color:var(--brand-ink);padding:14px 16px 64px}
+header h1{margin:0;font-size:20px;letter-spacing:.5px}
+header p{margin:2px 0 0;font-size:13px;opacity:.85}
+main{max-width:760px;margin:-50px auto 40px;padding:0 16px}
+.search{background:var(--card);border-radius:14px;padding:12px;box-shadow:0 4px 18px rgba(0,0,0,.08);position:sticky;top:8px;z-index:5}
+.search input{width:100%;font-size:18px;padding:12px 14px;border:2px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);outline:none}
+.search input:focus{border-color:var(--brand)}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:5px 12px;font-size:14px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.meta{color:var(--muted);font-size:13px;margin:12px 4px 8px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.banner{background:var(--cond-bg);color:var(--cond);border-radius:10px;padding:10px 12px;font-size:14px;margin:12px 0}
+.card{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--unk);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.card.ok{border-left-color:var(--ok)} .card.no{border-left-color:var(--no)} .card.cond{border-left-color:var(--cond)}
+.row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.name{font-weight:700;font-size:17px}
+.cat{color:var(--muted);font-size:13px}
+.badge{flex:none;font-weight:700;font-size:14px;border-radius:8px;padding:3px 10px;white-space:nowrap}
+.badge.ok{background:var(--ok-bg);color:var(--ok)} .badge.no{background:var(--no-bg);color:var(--no)}
+.badge.cond{background:var(--cond-bg);color:var(--cond)} .badge.unk{background:var(--unk-bg);color:var(--unk)}
+.detail{margin-top:6px;font-size:15px}
+.note{margin-top:4px;color:var(--muted);font-size:13px}
+.kw{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+.kw span{font-size:12px;background:var(--unk-bg);color:var(--muted);border-radius:6px;padding:1px 7px}
+mark{background:#ffe27a;color:#1c2430;border-radius:3px;padding:0 1px}
+.empty{text-align:center;color:var(--muted);padding:30px 10px}
+details.admin{margin-top:28px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+details.admin summary{cursor:pointer;font-weight:600}
+.admin p{font-size:14px;color:var(--muted)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--brand);background:transparent;color:var(--brand);border-radius:8px;padding:7px 12px;font-size:14px;cursor:pointer}
+.btn.primary{background:var(--brand);color:var(--brand-ink)}
+.msg{font-size:14px;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>二手寄賣收件查詢</h1>
+  <p>輸入商品名稱或關鍵字，立即判斷能不能收</p>
+</header>
+<main>
+  <div class="search">
+    <input id="q" type="search" placeholder="例如：腳踏車、泳衣、安全帽…" autocomplete="off" autofocus>
+    <div class="filters" id="filters">
+      <button class="chip" data-f="all" aria-pressed="true">全部</button>
+      <button class="chip" data-f="ok" aria-pressed="false">可收</button>
+      <button class="chip" data-f="cond" aria-pressed="false">有條件</button>
+      <button class="chip" data-f="no" aria-pressed="false">不可收</button>
+    </div>
+  </div>
+  <div id="banner"></div>
+  <div class="meta"><span id="count"></span><span id="source"></span></div>
+  <div id="list"></div>
+
+  <details class="admin">
+    <summary>資料管理（匯入收件標準）</summary>
+    <p>可直接選擇收件標準的 Excel（.xlsx）或 CSV 檔，系統會自動對應欄位：<b>類別、品項、關鍵字、判定、條件說明、備註</b>。沒有「判定」欄時，會依內容中的「不收／不可」「可收」字樣自動判斷。</p>
+    <p>匯入後只存在這台裝置的瀏覽器。要讓所有人都看到，請按「下載 CSV」，再把檔案覆蓋到 GitHub 專案的 <code>data/standards.csv</code>。</p>
+    <div class="btns">
+      <label class="btn primary">選擇檔案匯入<input id="file" type="file" accept=".xlsx,.xls,.csv" hidden></label>
+      <button class="btn" id="dl">下載 CSV</button>
+      <button class="btn" id="reset">還原為線上資料</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </details>
+</main>
+
+<script>
+const LS_KEY = "2hm-standards-local";
+let DATA = [], filter = "all", sourceLabel = "";
+
+/* ---------- CSV ---------- */
+function parseCSV(text){
+  text = text.replace(/^\uFEFF/, "");
+  const rows=[]; let row=[], cur="", q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c=='"'){ if(text[i+1]=='"'){cur+='"';i++;} else q=false; }
+      else cur+=c;
+    }else if(c=='"') q=true;
+    else if(c==','){row.push(cur);cur="";}
+    else if(c=='\n'||c=='\r'){ if(c=='\r'&&text[i+1]=='\n') i++; row.push(cur);rows.push(row);row=[];cur=""; }
+    else cur+=c;
+  }
+  if(cur!==""||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(r=>r.some(v=>String(v).trim()!==""));
+}
+function toCSV(items){
+  const esc=v=>{v=String(v??"");return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const head=["類別","品項","關鍵字","判定","條件說明","備註"];
+  const lines=[head.join(",")].concat(items.map(d=>[d.cat,d.name,d.kw,d.verdictText,d.cond,d.note].map(esc).join(",")));
+  return "\uFEFF"+lines.join("\r\n");
+}
+
+/* ---------- 欄位對應 ---------- */
+const COLMAP = {
+  cat:["類別","分類","大類","運動","類型","category"],
+  name:["品項","商品","名稱","項目","品名","item","product"],
+  kw:["關鍵字","別名","關鍵詞","同義","keyword","alias"],
+  verdict:["判定","可否","是否","收件","收/不收","結果","status"],
+  cond:["條件","說明","標準","收件標準","檢查","規範","細則"],
+  note:["備註","注意","note","remark"]
+};
+function rowsToItems(rows, defaultCat=""){
+  // 找表頭：第一個包含「品項/商品/名稱」類字樣的列
+  let hi = rows.findIndex(r=>r.some(c=>COLMAP.name.some(k=>String(c).includes(k))));
+  if(hi<0) hi=0;
+  const head = rows[hi].map(h=>String(h).trim());
+  const idx={};
+  for(const key of ["verdict","name","kw","cat","note","cond"]){
+    const i=head.findIndex((h,j)=>h && !Object.values(idx).includes(j) && COLMAP[key].some(k=>h.toLowerCase().includes(k.toLowerCase())));
+    if(i>=0) idx[key]=i;
+  }
+  if(idx.name===undefined) idx.name=0;
+  const items=[]; let lastCat=defaultCat;
+  for(const r of rows.slice(hi+1)){
+    const g=k=>idx[k]===undefined?"":String(r[idx[k]]??"").trim();
+    let cat=g("cat"); if(cat) lastCat=cat; else cat=lastCat; // 合併儲存格常見：沿用上一列類別
+    const name=g("name"); if(!name) continue;
+    items.push(makeItem({cat,name,kw:g("kw"),verdict:g("verdict"),cond:g("cond"),note:g("note")}));
+  }
+  return items;
+}
+function classify(v, text){
+  const s=(v||"").replace(/\s/g,"");
+  const t=s||"";
+  if(/^(✕|X|x|×|N|NO|否)$/i.test(t)||/不可|不收|不接受|拒收|禁止/.test(t)) return "no";
+  if(/條件|視|需|部分|限/.test(t)) return "cond";
+  if(/^(○|O|o|✓|V|v|Y|YES|是)$/i.test(t)||/可收|可以|接受|收件|^收$|可/.test(t)) return "ok";
+  // 沒有判定欄 → 從說明推斷
+  const x=(text||"");
+  if(!t && x){
+    if(/不收|不可|不接受|拒收|禁止寄賣/.test(x)) return "no";
+    if(/需|須|必須|限|若|才可|但/.test(x)) return "cond";
+    if(/可收|接受|可寄賣/.test(x)) return "ok";
+  }
+  return "unk";
+}
+const LABEL={ok:"可收",no:"不可收",cond:"有條件",unk:"需確認"};
+function makeItem(o){
+  const v=classify(o.verdict, (o.cond||"")+" "+(o.note||""));
+  const item={cat:o.cat||"",name:o.name||"",kw:o.kw||"",cond:o.cond||"",note:o.note||"",v,verdictText:o.verdict||LABEL[v]};
+  item._hay=norm([item.cat,item.name,item.kw,item.cond,item.note].join(" "));
+  item._key=norm([item.name,item.kw].join(" "));
+  return item;
+}
+
+/* ---------- 搜尋 ---------- */
+const FW = s=>s.replace(/[\uFF01-\uFF5E]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/\u3000/g," ");
+function norm(s){ return FW(String(s)).toLowerCase().replace(/臺/g,"台").replace(/[\-_/／、，,·．.()（）\[\]【】]/g," "); }
+function score(item, terms){
+  let s=0;
+  for(const t of terms){
+    if(!item._hay.includes(t)) return -1;      // 每個詞都要出現（AND）
+    if(norm(item.name)===t) s+=100;
+    else if(norm(item.name).includes(t)) s+=40;
+    else if(item._key.includes(t)) s+=25;
+    else s+=5;
+  }
+  return s;
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function hl(text, terms){
+  let h=esc(text);
+  for(const t of terms){ if(!t) continue;
+    const re=new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&").replace(/台/g,"[台臺]"),"gi");
+    h=h.replace(re,m=>"<mark>"+m+"</mark>");
+  }
+  return h;
+}
+function render(){
+  const raw=document.getElementById("q").value.trim();
+  const terms=norm(raw).split(/\s+/).filter(Boolean);
+  let res=DATA.map(d=>({d,s:terms.length?score(d,terms):0})).filter(x=>x.s>=0);
+  if(filter!=="all") res=res.filter(x=>x.d.v===filter);
+  res.sort((a,b)=>b.s-a.s);
+  const list=document.getElementById("list");
+  document.getElementById("count").textContent = terms.length ? `找到 ${res.length} 筆` : `共 ${res.length} 筆收件標準`;
+  if(!res.length){
+    list.innerHTML=`<div class="empty">找不到「${esc(raw)}」<br>試試換個說法或較短的關鍵字；仍查不到請詢問總召。</div>`;
+    return;
+  }
+  list.innerHTML=res.slice(0,200).map(({d})=>`
+    <div class="card ${d.v}">
+      <div class="row">
+        <div><div class="name">${hl(d.name,terms)}</div>${d.cat?`<div class="cat">${hl(d.cat,terms)}</div>`:""}</div>
+        <span class="badge ${d.v}">${esc(LABEL[d.v])}</span>
+      </div>
+      ${d.cond?`<div class="detail">${hl(d.cond,terms)}</div>`:""}
+      ${d.note?`<div class="note">※ ${hl(d.note,terms)}</div>`:""}
+      ${d.kw?`<div class="kw">${d.kw.split(/[\s,、，;；]+/).filter(Boolean).map(k=>`<span>${hl(k,terms)}</span>`).join("")}</div>`:""}
+    </div>`).join("");
+}
+
+/* ---------- 載入 ---------- */
+function setData(items,label){
+  DATA=items; sourceLabel=label;
+  document.getElementById("source").textContent=label;
+  const sample = items.length && items.every(d=>/範例/.test(d.note+d.cat));
+  document.getElementById("banner").innerHTML = sample
+    ? `<div class="banner">目前是範例資料。請到下方「資料管理」匯入正式的收件標準表。</div>` : "";
+  render();
+}
+async function loadRemote(){
+  try{
+    const r=await fetch("data/standards.csv?v="+Date.now());
+    if(!r.ok) throw 0;
+    setData(rowsToItems(parseCSV(await r.text())),"線上資料");
+  }catch(e){ setData([],"無法載入資料"); }
+}
+function init(){
+  let local=null;
+  try{ local=JSON.parse(localStorage.getItem(LS_KEY)||"null"); }catch(e){}
+  if(local&&local.items&&local.items.length){
+    setData(local.items.map(makeItem), `本機匯入：${local.name}`);
+  } else loadRemote();
+}
+
+/* ---------- 事件 ---------- */
+let t; document.getElementById("q").addEventListener("input",()=>{clearTimeout(t);t=setTimeout(render,80);});
+document.getElementById("filters").addEventListener("click",e=>{
+  const b=e.target.closest(".chip"); if(!b) return;
+  filter=b.dataset.f;
+  document.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b));
+  render();
+});
+const msg=s=>document.getElementById("msg").textContent=s;
+let xlsxReady=null;
+function loadXLSX(){
+  if(window.XLSX) return Promise.resolve();
+  return xlsxReady ||= new Promise((ok,ng)=>{
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload=ok; s.onerror=()=>ng(new Error("無法載入 Excel 解析元件"));
+    document.head.appendChild(s);
+  });
+}
+document.getElementById("file").addEventListener("change",async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  msg("讀取中…");
+  try{
+    let rows=[];
+    if(/\.csv$/i.test(f.name)){
+      rows=parseCSV(await f.text());
+    }else{
+      await loadXLSX();
+      const wb=XLSX.read(await f.arrayBuffer(),{type:"array"});
+      // 合併所有工作表（每張表各自找表頭）
+      let items=[];
+      for(const n of wb.SheetNames){
+        const r=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:""});
+        items=items.concat(rowsToItems(r, wb.SheetNames.length>1?n:""));
+      }
+      return finishImport(items,f.name);
+    }
+    finishImport(rowsToItems(rows),f.name);
+  }catch(err){ msg("匯入失敗："+err.message); }
+  e.target.value="";
+});
+function finishImport(items,name){
+  if(!items.length){ msg("沒有讀到資料，請確認表格有「品項／商品／名稱」欄位。"); return; }
+  const plain=items.map(({cat,name,kw,verdictText,cond,note})=>({cat,name,kw,verdict:verdictText,cond,note}));
+  try{ localStorage.setItem(LS_KEY,JSON.stringify({name,items:plain})); }catch(e){}
+  setData(items,`本機匯入：${name}`);
+  const unk=items.filter(d=>d.v==="unk").length;
+  msg(`已匯入 ${items.length} 筆。`+(unk?`其中 ${unk} 筆無法判斷可否收件，顯示為「需確認」。`:""));
+}
+document.getElementById("dl").addEventListener("click",()=>{
+  const b=new Blob([toCSV(DATA)],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="standards.csv"; a.click();
+});
+document.getElementById("reset").addEventListener("click",()=>{
+  try{ localStorage.removeItem(LS_KEY); }catch(e){}
+  msg("已還原為線上資料。"); loadRemote();
+});
+init();
+</script>
+</body>
+</html>
