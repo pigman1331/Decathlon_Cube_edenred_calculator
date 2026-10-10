@@ -54,6 +54,9 @@ main{max-width:760px;margin:-50px auto 40px;padding:0 16px}
 .kw span{font-size:12px;background:var(--unk-bg);color:var(--muted);border-radius:6px;padding:1px 7px}
 mark{background:#ffe27a;color:#1c2430;border-radius:3px;padding:0 1px}
 .empty{text-align:center;color:var(--muted);padding:30px 10px}
+details.rules{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin:12px 0 0;font-size:14px}
+details.rules summary{cursor:pointer;font-weight:600}
+details.rules ul{margin:6px 0 2px;padding-left:20px} details.rules li{margin:3px 0}
 details.admin{margin-top:28px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
 details.admin summary{cursor:pointer;font-weight:600}
 .admin p{font-size:14px;color:var(--muted)}
@@ -79,6 +82,15 @@ details.admin summary{cursor:pointer;font-weight:600}
     </div>
   </div>
   <div id="banner"></div>
+  <details class="rules" open>
+    <summary>收件大原則（2026 OCT）</summary>
+    <ul>
+      <li>EC／運動商城有賣的運動用品，不限品牌，經夥伴判斷<b>安全、衛生無虞</b>即可免費寄賣。</li>
+      <li><b>一律不收：</b>缺件、有安全／衛生疑慮、違法或侵權、非運動用途、氧化生鏽水解、標有「贈品不得轉售」。</li>
+      <li>「有條件」請看卡片說明：<b>限九成新</b>＝僅有輕微使用痕跡；<b>限完美如新</b>＝無使用痕跡。</li>
+      <li>查不到或有爭議的物品，由城市與 Ted 共同決定。</li>
+    </ul>
+  </details>
   <div class="meta"><span id="count"></span><span id="source"></span></div>
   <div id="list"></div>
 
@@ -173,6 +185,7 @@ function makeItem(o){
   const item={cat:o.cat||"",name:o.name||"",kw:o.kw||"",cond:o.cond||"",note:o.note||"",v,verdictText:o.verdict||LABEL[v]};
   item._hay=norm([item.cat,item.name,item.kw,item.cond,item.note].join(" "));
   item._key=norm([item.name,item.kw].join(" "));
+  item._kws=norm(item.kw).split(/\s+/).filter(Boolean);
   return item;
 }
 
@@ -185,6 +198,7 @@ function score(item, terms){
     if(!item._hay.includes(t)) return -1;      // 每個詞都要出現（AND）
     if(norm(item.name)===t) s+=100;
     else if(norm(item.name).includes(t)) s+=40;
+    else if(item._kws.includes(t)) s+=60;
     else if(item._key.includes(t)) s+=25;
     else s+=5;
   }
@@ -202,13 +216,14 @@ function hl(text, terms){
 function render(){
   const raw=document.getElementById("q").value.trim();
   const terms=norm(raw).split(/\s+/).filter(Boolean);
+  const rb=document.querySelector("details.rules"); if(rb) rb.open=!terms.length;
   let res=DATA.map(d=>({d,s:terms.length?score(d,terms):0})).filter(x=>x.s>=0);
   if(filter!=="all") res=res.filter(x=>x.d.v===filter);
   res.sort((a,b)=>b.s-a.s);
   const list=document.getElementById("list");
   document.getElementById("count").textContent = terms.length ? `找到 ${res.length} 筆` : `共 ${res.length} 筆收件標準`;
   if(!res.length){
-    list.innerHTML=`<div class="empty">找不到「${esc(raw)}」<br>試試換個說法或較短的關鍵字；仍查不到請詢問總召。</div>`;
+    list.innerHTML=`<div class="empty">找不到「${esc(raw)}」<br>試試換個說法或較短的關鍵字；仍查不到請詢問總召或由城市與 Ted 決定。</div>`;
     return;
   }
   list.innerHTML=res.slice(0,200).map(({d})=>`
