@@ -119,6 +119,13 @@ for k in order:
     d=items[k]; rows.append(["、".join(d["cat"]),d["name"],d["kw"],d["verdict"],d["cond"],d["note"]])
 rows+=EXTRA
 for n,kw in P: rows.append(["寄賣大原則",n,kw,"不可收","一律不收",""])
+# 總召覆核覆寫（優先於 xlsx）
+OVERRIDE={
+ "充氣泳池":("不可收","屬充氣式浮力產品，無法評估安全性，不收","總召確認不收（10/11）；收件表 ※3「可收」已作廢"),
+}
+for r in rows:
+    if r[1] in OVERRIDE: r[3],r[4],r[5]=OVERRIDE[r[1]]
+REASON["充氣泳池"]="安全性"
 for r in rows:
     r.append(REASON.get(r[1],"其他限制") if r[3]=="不可收" else "")
 miss=[r[1] for r in rows if r[6]=="其他限制"]
