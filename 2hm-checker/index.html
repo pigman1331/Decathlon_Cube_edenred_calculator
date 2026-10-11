@@ -67,13 +67,16 @@ details.admin summary{cursor:pointer;font-weight:600}
 .reply{margin-top:10px;background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:8px 10px;font-size:14px}
 .reply .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--muted);font-size:12px;margin-bottom:4px}
 .reply .rt{color:var(--text)}
-.copy{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;font-size:12px;cursor:pointer}
+.copy{flex:none;white-space:nowrap;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;font-size:12px;cursor:pointer}
 .tag{display:inline-block;font-size:12px;border-radius:6px;padding:0 6px;background:var(--no-bg);color:var(--no);margin-left:4px}
 details.faq{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin:10px 0 0;font-size:14px}
 details.faq summary{cursor:pointer;font-weight:600}
 .faq h4{margin:12px 0 4px;font-size:14px}
 .faq .q{font-weight:600;margin-top:8px}
 .faq .reply{margin-top:4px}
+.ref{margin-top:10px}
+.ref summary{cursor:pointer;font-size:13px;color:var(--brand)}
+.ref img{display:block;width:100%;height:auto;border-radius:8px;border:1px solid var(--line);margin-top:6px;background:#fff}
 </style>
 </head>
 <body>
@@ -154,8 +157,8 @@ function parseCSV(text){
 }
 function toCSV(items){
   const esc=v=>{v=String(v??"");return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
-  const head=["類別","品項","關鍵字","判定","條件說明","備註","原因類型"];
-  const lines=[head.join(",")].concat(items.map(d=>[d.cat,d.name,d.kw,d.verdictText,d.cond,d.note,d.reason].map(esc).join(",")));
+  const head=["類別","品項","關鍵字","判定","條件說明","備註","原因類型","參考圖"];
+  const lines=[head.join(",")].concat(items.map(d=>[d.cat,d.name,d.kw,d.verdictText,d.cond,d.note,d.reason,d.img].map(esc).join(",")));
   return "\uFEFF"+lines.join("\r\n");
 }
 
@@ -167,7 +170,8 @@ const COLMAP = {
   verdict:["判定","可否","是否","收件","收/不收","結果","status"],
   cond:["條件","說明","標準","收件標準","檢查","規範","細則"],
   note:["備註","注意","note","remark"],
-  reason:["原因類型","不收原因","原因","reason"]
+  reason:["原因類型","不收原因","原因","reason"],
+  img:["參考圖","圖片","image"]
 };
 function rowsToItems(rows, defaultCat=""){
   // 找表頭：第一個包含「品項/商品/名稱」類字樣的列
@@ -175,7 +179,7 @@ function rowsToItems(rows, defaultCat=""){
   if(hi<0) hi=0;
   const head = rows[hi].map(h=>String(h).trim());
   const idx={};
-  for(const key of ["reason","verdict","name","kw","cat","note","cond"]){
+  for(const key of ["img","reason","verdict","name","kw","cat","note","cond"]){
     const i=head.findIndex((h,j)=>h && !Object.values(idx).includes(j) && COLMAP[key].some(k=>h.toLowerCase().includes(k.toLowerCase())));
     if(i>=0) idx[key]=i;
   }
@@ -185,7 +189,7 @@ function rowsToItems(rows, defaultCat=""){
     const g=k=>idx[k]===undefined?"":String(r[idx[k]]??"").trim();
     let cat=g("cat"); if(cat) lastCat=cat; else cat=lastCat; // 合併儲存格常見：沿用上一列類別
     const name=g("name"); if(!name) continue;
-    items.push(makeItem({cat,name,kw:g("kw"),verdict:g("verdict"),cond:g("cond"),note:g("note"),reason:g("reason")}));
+    items.push(makeItem({cat,name,kw:g("kw"),verdict:g("verdict"),cond:g("cond"),note:g("note"),reason:g("reason"),img:g("img")}));
   }
   return items;
 }
@@ -223,6 +227,12 @@ function guessReason(d){
   if(/生鏽|水解|缺件|損壞/.test(x)) return "狀況不佳";
   return "其他限制";
 }
+function refImg(v){
+  if(!v) return "";
+  const [src,cap]=v.split("|");
+  if(!/^(img\/|https:\/\/)/.test(src)) return "";
+  return `<details class="ref"><summary>📷 參考圖：${esc(cap||"查看")}</summary><a href="${esc(src)}" target="_blank" rel="noopener"><img src="${esc(src)}" alt="${esc(cap||"參考圖")}" loading="lazy"></a></details>`;
+}
 function replyBox(key, prefix){
   const r=REPLY[key]; if(!r) return "";
   return `<div class="reply" data-copy><div class="rh"><span>${prefix||"回覆賣家"}｜${esc(r.label)}</span><button class="copy">複製</button></div><div class="rt">${esc(r.text)}</div></div>`;
@@ -230,6 +240,7 @@ function replyBox(key, prefix){
 function makeItem(o){
   const v=classify(o.verdict, (o.cond||"")+" "+(o.note||""));
   const item={cat:o.cat||"",name:o.name||"",kw:o.kw||"",cond:o.cond||"",note:o.note||"",v,verdictText:o.verdict||LABEL[v]};
+  item.img = o.img||"";
   item.reason = v==="no" ? (REPLY[o.reason]?o.reason:guessReason(item)) : (o.reason||"");
   item._hay=norm([item.cat,item.name,item.kw,item.cond,item.note].join(" "));
   item._key=norm([item.name,item.kw].join(" "));
@@ -283,6 +294,7 @@ function render(){
       </div>
       ${d.cond?`<div class="detail">${hl(d.cond,terms)}</div>`:""}
       ${d.note?`<div class="note">※ ${hl(d.note,terms)}</div>`:""}
+      ${refImg(d.img)}
       ${d.v==="no"?replyBox(d.reason):""}
       ${d.v==="cond"?replyBox("狀況不佳","若狀態未達標準，回覆賣家"):""}
       ${d.kw?`<div class="kw">${d.kw.split(/[\s,、，;；]+/).filter(Boolean).map(k=>`<span>${hl(k,terms)}</span>`).join("")}</div>`:""}

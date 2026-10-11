@@ -121,15 +121,18 @@ rows+=EXTRA
 for n,kw in P: rows.append(["寄賣大原則",n,kw,"不可收","一律不收",""])
 # 總召覆核覆寫（優先於 xlsx）
 OVERRIDE={
- "充氣泳池":("不可收","屬充氣式浮力產品，無法評估安全性，不收","總召確認不收（10/11）；收件表 ※3「可收」已作廢"),
 }
 for r in rows:
     if r[1] in OVERRIDE: r[3],r[4],r[5]=OVERRIDE[r[1]]
-REASON["充氣泳池"]="安全性"
 for r in rows:
     r.append(REASON.get(r[1],"其他限制") if r[3]=="不可收" else "")
+# 參考圖（訓練簡報）
+IMG={}
+for n in ["充氣泳池","潛水面鏡","呼吸管","咬嘴","臂圈","充氣泳圈","泡棉泳圈","救生衣","充氣浮力背心","八字圈"]:
+    IMG[n]="img/training-p42-water.jpg|門市收件訓練簡報 p.42 水上用品注意事項"
+for r in rows: r.append(IMG.get(r[1],""))
 miss=[r[1] for r in rows if r[6]=="其他限制"]
 print("其他限制:",miss,file=sys.stderr)
 with open(out,"w",encoding="utf-8-sig",newline="") as f:
-    w=csv.writer(f); w.writerow(["類別","品項","關鍵字","判定","條件說明","備註","原因類型"]); w.writerows(rows)
+    w=csv.writer(f); w.writerow(["類別","品項","關鍵字","判定","條件說明","備註","原因類型","參考圖"]); w.writerows(rows)
 print(len(rows),"rows")
