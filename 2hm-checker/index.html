@@ -64,6 +64,16 @@ details.admin summary{cursor:pointer;font-weight:600}
 .btn{border:1px solid var(--brand);background:transparent;color:var(--brand);border-radius:8px;padding:7px 12px;font-size:14px;cursor:pointer}
 .btn.primary{background:var(--brand);color:var(--brand-ink)}
 .msg{font-size:14px;margin-top:8px}
+.reply{margin-top:10px;background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:8px 10px;font-size:14px}
+.reply .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--muted);font-size:12px;margin-bottom:4px}
+.reply .rt{color:var(--text)}
+.copy{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;font-size:12px;cursor:pointer}
+.tag{display:inline-block;font-size:12px;border-radius:6px;padding:0 6px;background:var(--no-bg);color:var(--no);margin-left:4px}
+details.faq{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin:10px 0 0;font-size:14px}
+details.faq summary{cursor:pointer;font-weight:600}
+.faq h4{margin:12px 0 4px;font-size:14px}
+.faq .q{font-weight:600;margin-top:8px}
+.faq .reply{margin-top:4px}
 </style>
 </head>
 <body>
@@ -91,12 +101,26 @@ details.admin summary{cursor:pointer;font-weight:600}
       <li>查不到或有爭議的物品，由城市與 Ted 共同決定。</li>
     </ul>
   </details>
+  <details class="faq" id="faq">
+    <summary>回覆話術（賣家／買家／夥伴）</summary>
+    <p style="color:var(--muted);margin:6px 0 0">先確認溝通對象是誰：<b>賣家、買家、還是夥伴</b>。查詢到「不可收」的商品時，卡片下方會直接顯示對賣家的建議回覆。</p>
+    <h4>🙋 賣家｜不可寄賣的商品</h4>
+    <div id="faq-seller"></div>
+    <div class="q">為什麼 A 店有收、B 店沒收？</div>
+    <div class="reply"><div class="rt">回歸活動辦法確實執行，並通知 Ted 協調他店下架。若活動辦法沒有特別規範，以城市為單位討論後，和 Ted 確認是否開放收件。</div></div>
+    <h4>🛒 買家</h4>
+    <div class="q">之前有看過這個，為什麼這次活動都找不到？</div>
+    <div class="reply" data-copy><div class="rh"><span>建議回覆</span><button class="copy">複製</button></div><div class="rt">賣家寄賣的商品每次活動都不一樣，你可以參考門市賣場看看有沒有類似的商品哦～有需要幫你介紹嗎？</div></div>
+    <h4>👥 夥伴</h4>
+    <div class="q">這次放寬許多寄賣類別，為什麼？</div>
+    <div class="reply"><div class="rt">之前活動目標是提高媒合率，所以才忍痛捨棄部分媒合率較低的類別。這次為了和收購服務做出區隔，希望放寬運動類別、降低寄賣門檻，讓更多顧客藉由活動認識迪卡儂的各種循環服務，達到「收購服務＋寄賣服務」1+1 大於 2 的效果。</div></div>
+  </details>
   <div class="meta"><span id="count"></span><span id="source"></span></div>
   <div id="list"></div>
 
   <details class="admin">
     <summary>資料管理（匯入收件標準）</summary>
-    <p>可直接選擇收件標準的 Excel（.xlsx）或 CSV 檔，系統會自動對應欄位：<b>類別、品項、關鍵字、判定、條件說明、備註</b>。沒有「判定」欄時，會依內容中的「不收／不可」「可收」字樣自動判斷。</p>
+    <p>可直接選擇收件標準的 Excel（.xlsx）或 CSV 檔，系統會自動對應欄位：<b>類別、品項、關鍵字、判定、條件說明、備註、原因類型</b>（原因類型：安全性／衛生／非運動用途／狀況不佳／法規爭議／其他限制，決定不可收時顯示的回覆話術）。沒有「判定」欄時，會依內容中的「不收／不可」「可收」字樣自動判斷。</p>
     <p>匯入後只存在這台裝置的瀏覽器。要讓所有人都看到，請按「下載 CSV」，再把檔案覆蓋到 GitHub 專案的 <code>data/standards.csv</code>。</p>
     <div class="btns">
       <label class="btn primary">選擇檔案匯入<input id="file" type="file" accept=".xlsx,.xls,.csv" hidden></label>
@@ -130,8 +154,8 @@ function parseCSV(text){
 }
 function toCSV(items){
   const esc=v=>{v=String(v??"");return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
-  const head=["類別","品項","關鍵字","判定","條件說明","備註"];
-  const lines=[head.join(",")].concat(items.map(d=>[d.cat,d.name,d.kw,d.verdictText,d.cond,d.note].map(esc).join(",")));
+  const head=["類別","品項","關鍵字","判定","條件說明","備註","原因類型"];
+  const lines=[head.join(",")].concat(items.map(d=>[d.cat,d.name,d.kw,d.verdictText,d.cond,d.note,d.reason].map(esc).join(",")));
   return "\uFEFF"+lines.join("\r\n");
 }
 
@@ -142,7 +166,8 @@ const COLMAP = {
   kw:["關鍵字","別名","關鍵詞","同義","keyword","alias"],
   verdict:["判定","可否","是否","收件","收/不收","結果","status"],
   cond:["條件","說明","標準","收件標準","檢查","規範","細則"],
-  note:["備註","注意","note","remark"]
+  note:["備註","注意","note","remark"],
+  reason:["原因類型","不收原因","原因","reason"]
 };
 function rowsToItems(rows, defaultCat=""){
   // 找表頭：第一個包含「品項/商品/名稱」類字樣的列
@@ -150,7 +175,7 @@ function rowsToItems(rows, defaultCat=""){
   if(hi<0) hi=0;
   const head = rows[hi].map(h=>String(h).trim());
   const idx={};
-  for(const key of ["verdict","name","kw","cat","note","cond"]){
+  for(const key of ["reason","verdict","name","kw","cat","note","cond"]){
     const i=head.findIndex((h,j)=>h && !Object.values(idx).includes(j) && COLMAP[key].some(k=>h.toLowerCase().includes(k.toLowerCase())));
     if(i>=0) idx[key]=i;
   }
@@ -160,7 +185,7 @@ function rowsToItems(rows, defaultCat=""){
     const g=k=>idx[k]===undefined?"":String(r[idx[k]]??"").trim();
     let cat=g("cat"); if(cat) lastCat=cat; else cat=lastCat; // 合併儲存格常見：沿用上一列類別
     const name=g("name"); if(!name) continue;
-    items.push(makeItem({cat,name,kw:g("kw"),verdict:g("verdict"),cond:g("cond"),note:g("note")}));
+    items.push(makeItem({cat,name,kw:g("kw"),verdict:g("verdict"),cond:g("cond"),note:g("note"),reason:g("reason")}));
   }
   return items;
 }
@@ -180,9 +205,32 @@ function classify(v, text){
   return "unk";
 }
 const LABEL={ok:"可收",no:"不可收",cond:"有條件",unk:"需確認"};
+/* ---------- 回覆話術（對賣家） ---------- */
+const REPLY={
+  "安全性":{label:"無法評估之安全性商品",text:"不好意思，這類商品因為我們無法確保安全性，所以目前沒辦法幫您寄賣哦，還請多多包涵～"},
+  "衛生":{label:"個人衛生考量",text:"不好意思，這類商品因為衛生考量，所以目前沒辦法幫您寄賣哦，還請多多包涵～"},
+  "非運動用途":{label:"非運動用途",text:"不好意思，迪卡儂二手市集主要收集運動相關的二手商品，非運動用途的商品目前沒辦法幫您寄賣哦，還請多多包涵～"},
+  "狀況不佳":{label:"狀況不佳／未達收件標準",text:"不好意思，這個商品的狀態不太符合活動的收件標準，請問您有考慮維修翻新嗎？如果沒有的話，目前無法幫您寄賣哦，還請多多包涵～"},
+  "法規爭議":{label:"法規上具有爭議",text:"不好意思，這類商品可能有一些法律上的疑慮，所以目前沒辦法幫您寄賣，還請多多包涵～"},
+  "其他限制":{label:"不在本次收件範圍",text:"不好意思，這類商品不在本次活動的收件範圍內，所以目前沒辦法幫您寄賣哦，還請多多包涵～"}
+};
+function guessReason(d){
+  const x=d.name+" "+d.cond+" "+d.note;
+  if(/衛生|服飾|鞋|泳衣|水壺/.test(x)) return "衛生";
+  if(/安全|電動|充氣|插電/.test(x)) return "安全性";
+  if(/非運動/.test(x)) return "非運動用途";
+  if(/贈品|違法|侵權|仿冒/.test(x)) return "法規爭議";
+  if(/生鏽|水解|缺件|損壞/.test(x)) return "狀況不佳";
+  return "其他限制";
+}
+function replyBox(key, prefix){
+  const r=REPLY[key]; if(!r) return "";
+  return `<div class="reply" data-copy><div class="rh"><span>${prefix||"回覆賣家"}｜${esc(r.label)}</span><button class="copy">複製</button></div><div class="rt">${esc(r.text)}</div></div>`;
+}
 function makeItem(o){
   const v=classify(o.verdict, (o.cond||"")+" "+(o.note||""));
   const item={cat:o.cat||"",name:o.name||"",kw:o.kw||"",cond:o.cond||"",note:o.note||"",v,verdictText:o.verdict||LABEL[v]};
+  item.reason = v==="no" ? (REPLY[o.reason]?o.reason:guessReason(item)) : (o.reason||"");
   item._hay=norm([item.cat,item.name,item.kw,item.cond,item.note].join(" "));
   item._key=norm([item.name,item.kw].join(" "));
   item._kws=norm(item.kw).split(/\s+/).filter(Boolean);
@@ -217,6 +265,7 @@ function render(){
   const raw=document.getElementById("q").value.trim();
   const terms=norm(raw).split(/\s+/).filter(Boolean);
   const rb=document.querySelector("details.rules"); if(rb) rb.open=!terms.length;
+  const fq=document.getElementById("faq"); if(fq&&terms.length) fq.open=false;
   let res=DATA.map(d=>({d,s:terms.length?score(d,terms):0})).filter(x=>x.s>=0);
   if(filter!=="all") res=res.filter(x=>x.d.v===filter);
   res.sort((a,b)=>b.s-a.s);
@@ -234,6 +283,8 @@ function render(){
       </div>
       ${d.cond?`<div class="detail">${hl(d.cond,terms)}</div>`:""}
       ${d.note?`<div class="note">※ ${hl(d.note,terms)}</div>`:""}
+      ${d.v==="no"?replyBox(d.reason):""}
+      ${d.v==="cond"?replyBox("狀況不佳","若狀態未達標準，回覆賣家"):""}
       ${d.kw?`<div class="kw">${d.kw.split(/[\s,、，;；]+/).filter(Boolean).map(k=>`<span>${hl(k,terms)}</span>`).join("")}</div>`:""}
     </div>`).join("");
 }
@@ -269,6 +320,16 @@ document.getElementById("filters").addEventListener("click",e=>{
   filter=b.dataset.f;
   document.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b));
   render();
+});
+document.getElementById("faq-seller").innerHTML=Object.keys(REPLY).filter(k=>k!=="其他限制").map(k=>replyBox(k,"賣家")).join("");
+document.addEventListener("click",async e=>{
+  const b=e.target.closest(".copy"); if(!b) return;
+  const t=b.closest("[data-copy]").querySelector(".rt").innerText;
+  try{ await navigator.clipboard.writeText(t); }catch(_){
+    const ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta); ta.select();
+    try{document.execCommand("copy");}catch(__){} ta.remove();
+  }
+  const o=b.textContent; b.textContent="已複製"; setTimeout(()=>b.textContent=o,1200);
 });
 const msg=s=>document.getElementById("msg").textContent=s;
 let xlsxReady=null;

@@ -103,11 +103,26 @@ EXTRA=[
 for k in order:
     n=items[k]["name"]
     if n in NOTE_ADD: items[k]["note"]=(items[k]["note"]+"；" if items[k]["note"] else "")+NOTE_ADD[n]
+# 不可收原因類型（對應回覆話術）
+REASON={}
+for n in ["電動跑步機","插電/充電大型器材","電動按摩槍","使用過木質球棒","硬式護具","安全帽/頭盔","碳纖車架自行車","兒童安全座椅",
+          "電動滑板車","電動自行車","自行車訓練架","塑膠車胎腳踏車","自行車車頂架/箱","學步車","電動玩具車","體脂計",
+          "救生衣","玻纖衝浪板","充氣玩具","充氣浮力背心","充氣泳圈","充氣SUP","臂圈","八字圈",
+          "安全扣環","電動推車","爐具/卡式爐","汽化燈/瓦斯燈","煤油暖爐","安全帽","攀岩繩","內建電池燈具","車頂箱","車頂架"]: REASON[n]="安全性"
+for n in ["服飾","鞋子","水壺","護齒","潛水防寒衣","子母衣","泳衣","呼吸管","咬嘴","潛水面罩","雪靴","綁帶",
+          "充氣枕頭","充氣床墊","自動充氣床墊","充氣睡袋"]: REASON[n]="衛生"
+for n in ["旅行箱","機車雨衣","無防水功能外套","非專業登山外套","吊床","掛飾","風扇","蚊香/蚊香架","非運動用途商品"]: REASON[n]="非運動用途"
+for n in ["缺件商品","有安全或衛生疑慮","氧化、生鏽、水解","水洗標已剪掉的羽絨外套"]: REASON[n]="狀況不佳"
+for n in ["違法或侵權商品","標有「贈品不得轉售」"]: REASON[n]="法規爭議"
 rows=[]
 for k in order:
     d=items[k]; rows.append(["、".join(d["cat"]),d["name"],d["kw"],d["verdict"],d["cond"],d["note"]])
 rows+=EXTRA
 for n,kw in P: rows.append(["寄賣大原則",n,kw,"不可收","一律不收",""])
+for r in rows:
+    r.append(REASON.get(r[1],"其他限制") if r[3]=="不可收" else "")
+miss=[r[1] for r in rows if r[6]=="其他限制"]
+print("其他限制:",miss,file=sys.stderr)
 with open(out,"w",encoding="utf-8-sig",newline="") as f:
-    w=csv.writer(f); w.writerow(["類別","品項","關鍵字","判定","條件說明","備註"]); w.writerows(rows)
+    w=csv.writer(f); w.writerow(["類別","品項","關鍵字","判定","條件說明","備註","原因類型"]); w.writerows(rows)
 print(len(rows),"rows")
