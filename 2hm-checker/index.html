@@ -77,12 +77,28 @@ details.faq summary{cursor:pointer;font-weight:600}
 .ref{margin-top:10px}
 .ref summary{cursor:pointer;font-size:13px;color:var(--brand)}
 .ref img{display:block;width:100%;height:auto;border-radius:8px;border:1px solid var(--line);margin-top:6px;background:#fff}
+/* 登記類別 */
+.reg{margin-top:8px;background:var(--bg);border-radius:8px;padding:6px 10px;font-size:14px}
+.reg .rl{color:var(--brand);font-weight:700;font-size:12px;letter-spacing:.5px}
+.path{font-weight:600}
+.path .sep{color:var(--muted);font-weight:400;margin:0 4px}
+.reg .rn,.regbox .rn{color:var(--muted);font-size:12px}
+.regbox{background:var(--card);border:2px solid var(--brand);border-radius:12px;padding:10px 14px;margin:12px 0 10px}
+.regbox h3{margin:0 0 6px;font-size:14px;color:var(--brand)}
+.regbox ul{list-style:none;margin:0;padding:0}
+.regbox li{padding:6px 0;border-top:1px solid var(--line)}
+.regbox li:first-child{border-top:0}
+details.regall{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin:10px 0 0;font-size:14px}
+details.regall summary{cursor:pointer;font-weight:600}
+.regall dl{margin:8px 0 2px}
+.regall dt{font-weight:700;margin-top:10px}
+.regall dd{margin:2px 0 0;color:var(--muted)}
 </style>
 </head>
 <body>
 <header>
   <h1>二手寄賣收件查詢</h1>
-  <p>輸入商品名稱或關鍵字，立即判斷能不能收</p>
+  <p>輸入商品名稱或關鍵字，立即判斷能不能收、登記時選哪個類別</p>
 </header>
 <main>
   <div class="search">
@@ -118,6 +134,12 @@ details.faq summary{cursor:pointer;font-weight:600}
     <div class="q">這次放寬許多寄賣類別，為什麼？</div>
     <div class="reply"><div class="rt">之前活動目標是提高媒合率，所以才忍痛捨棄部分媒合率較低的類別。這次為了和收購服務做出區隔，希望放寬運動類別、降低寄賣門檻，讓更多顧客藉由活動認識迪卡儂的各種循環服務，達到「收購服務＋寄賣服務」1+1 大於 2 的效果。</div></div>
   </details>
+  <details class="regall" id="regall">
+    <summary>登記頁類別總覽（主類別 › 子類別）</summary>
+    <p style="color:var(--muted);margin:6px 0 0">LINE 登記頁「商品主類別／商品子類別」的完整選項（2026-10-17 擷取）。</p>
+    <dl id="regall-list"></dl>
+  </details>
+  <div id="regmatch"></div>
   <div class="meta"><span id="count"></span><span id="source"></span></div>
   <div id="list"></div>
 
@@ -272,18 +294,73 @@ function hl(text, terms){
   }
   return h;
 }
+/* ---------- 登記類別 ---------- */
+let REG=[], REG_BY_ITEM={};
+async function loadReg(){
+  try{
+    const r=await fetch("data/register_categories.csv?v="+Date.now());
+    if(!r.ok) throw 0;
+    const rows=parseCSV(await r.text());
+    const h=rows[0].map(s=>s.trim()), ix=k=>h.indexOf(k);
+    REG=rows.slice(1).map(c=>{
+      const o={main:(c[ix("主類別")]||"").trim(),sub:(c[ix("子類別")]||"").trim(),kw:(c[ix("關鍵字")]||"").trim(),
+        items:(c[ix("對應品項")]||"").split(/[；;]/).map(s=>s.trim()).filter(Boolean),note:(c[ix("說明")]||"").trim()};
+      o._hay=norm([o.main,o.sub,o.kw,o.items.join(" ")].join(" "));
+      o._kws=norm(o.kw).split(/\s+/).filter(Boolean);
+      return o;
+    }).filter(o=>o.main&&o.sub);
+    REG_BY_ITEM={};
+    for(const o of REG) for(const n of o.items) (REG_BY_ITEM[n] ||= []).push(o);
+    const groups={};
+    for(const o of REG) (groups[o.main] ||= []).push(o.sub);
+    document.getElementById("regall-list").innerHTML=Object.entries(groups)
+      .map(([m,s])=>`<dt>${esc(m)}</dt><dd>${s.map(esc).join("、")}</dd>`).join("");
+    document.querySelector("#regall summary").textContent=`登記頁類別總覽（${Object.keys(groups).length} 個主類別、${REG.length} 個子類別）`;
+  }catch(e){ REG=[]; }
+  render();
+}
+const pathHTML=(main,subs,terms)=>`<span class="path">${hl(main,terms)}<span class="sep">›</span>${subs.map(s=>hl(s,terms)).join("<span class=\"sep\">／</span>")}</span>`;
+function regHint(d,terms){
+  if(d.v==="no") return "";
+  const list=REG_BY_ITEM[d.name]; if(!list) return "";
+  const byMain={};
+  for(const o of list) (byMain[o.main] ||= {subs:[],notes:new Set()}).subs.push(o.sub), o.note && byMain[o.main].notes.add(o.note);
+  return Object.entries(byMain).map(([m,g])=>`<div class="reg"><div class="rl">📝 登記時選</div>${pathHTML(m,g.subs,terms)}${g.notes.size?`<div class="rn">${[...g.notes].map(esc).join("；")}</div>`:""}</div>`).join("");
+}
+function regScore(o,terms){
+  let s=0;
+  for(const t of terms){
+    if(!o._hay.includes(t)) return -1;
+    if(norm(o.sub)===t) s+=100; else if(norm(o.sub).includes(t)) s+=50;
+    else if(o._kws.includes(t)) s+=60; else if(norm(o.main).includes(t)) s+=30; else s+=10;
+  }
+  return s;
+}
+function renderReg(terms){
+  const box=document.getElementById("regmatch");
+  if(!terms.length||!REG.length){ box.innerHTML=""; return 0; }
+  const m=REG.map(o=>({o,s:regScore(o,terms)})).filter(x=>x.s>=0).sort((a,b)=>b.s-a.s).slice(0,12);
+  box.innerHTML = m.length ? `<div class="regbox"><h3>📝 登記頁這樣選（主類別 › 子類別）</h3><ul>${
+    m.map(({o})=>`<li>${pathHTML(o.main,[o.sub],terms)}${o.note?`<div class="rn">${esc(o.note)}</div>`:""}</li>`).join("")
+  }</ul></div>` : "";
+  return m.length;
+}
+
 function render(){
   const raw=document.getElementById("q").value.trim();
   const terms=norm(raw).split(/\s+/).filter(Boolean);
   const rb=document.querySelector("details.rules"); if(rb) rb.open=!terms.length;
   const fq=document.getElementById("faq"); if(fq&&terms.length) fq.open=false;
+  const ra=document.getElementById("regall"); if(ra&&terms.length) ra.open=false;
+  const regN=renderReg(terms);
   let res=DATA.map(d=>({d,s:terms.length?score(d,terms):0})).filter(x=>x.s>=0);
   if(filter!=="all") res=res.filter(x=>x.d.v===filter);
   res.sort((a,b)=>b.s-a.s);
   const list=document.getElementById("list");
   document.getElementById("count").textContent = terms.length ? `找到 ${res.length} 筆` : `共 ${res.length} 筆收件標準`;
   if(!res.length){
-    list.innerHTML=`<div class="empty">找不到「${esc(raw)}」<br>試試換個說法或較短的關鍵字；仍查不到請詢問總召或由城市與 Ted 決定。</div>`;
+    list.innerHTML = regN ? `<div class="empty">收件標準裡沒有「${esc(raw)}」這個品項，請先依收件大原則判斷，再用上方類別登記。</div>`
+      : `<div class="empty">找不到「${esc(raw)}」<br>試試換個說法或較短的關鍵字；仍查不到請詢問總召或由城市與 Ted 決定。</div>`;
     return;
   }
   list.innerHTML=res.slice(0,200).map(({d})=>`
@@ -294,6 +371,7 @@ function render(){
       </div>
       ${d.cond?`<div class="detail">${hl(d.cond,terms)}</div>`:""}
       ${d.note?`<div class="note">※ ${hl(d.note,terms)}</div>`:""}
+      ${regHint(d,terms)}
       ${refImg(d.img)}
       ${d.v==="no"?replyBox(d.reason):""}
       ${d.v==="cond"?replyBox("狀況不佳","若狀態未達標準，回覆賣家"):""}
@@ -393,6 +471,7 @@ document.getElementById("reset").addEventListener("click",()=>{
   msg("已還原為線上資料。"); loadRemote();
 });
 init();
+loadReg();
 </script>
 </body>
 </html>
