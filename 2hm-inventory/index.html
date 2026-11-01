@@ -273,7 +273,7 @@ let gas=null, gasTimer=null, gasOk=null;
   }}catch(e){}
   if(db){ $("#mode").textContent="多機同步中"; subscribe(); syncLocal(); }
   else {
-    $("#apiCard").hidden=false;
+    $("#apiCard").hidden=!/[?&]admin\b/.test(location.search);
     let q=null; try{q=new URLSearchParams(location.search).get("api")}catch(e){}
     if(q&&/^https:\/\/script\.google(usercontent)?\.com\//.test(q)) LS.set("api",q);
     gas=LS.get("api",null)||"https://script.google.com/macros/s/AKfycbyEGYTTHn7VRPRK6ko3ej1ZWZkM00ua_HteHgEbgtbokhqHACnpLxu5YDfFTjQkUWdyAQ/exec"; $("#apiUrl").value=gas||"";
