@@ -1,0 +1,735 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>內湖二手市集盤點</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one-column field tool — sticky count strip on top, three tabs (掃描 / 核對 / 紀錄), big thumb-reachable scan button */
+:root{
+  --bg:#f3f5f8; --panel:#ffffff; --ink:#122033; --muted:#5b6b80; --line:#d8dee7;
+  --accent:#0a5bd3; --accent-ink:#ffffff; --ok:#16833f; --warn:#b4610b; --bad:#c52a2a; --soft:#e7eefa;
+  --ok-soft:#e3f3e8; --warn-soft:#fbefdf; --bad-soft:#fbe5e5;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e141c; --panel:#17202b; --ink:#e8eef6; --muted:#93a2b5; --line:#2a3644;
+  --accent:#4d8ef0; --accent-ink:#06101e; --ok:#4cc27a; --warn:#e7a04b; --bad:#ef6b6b; --soft:#1c2a3d;
+  --ok-soft:#173023; --warn-soft:#33261a; --bad-soft:#3a1d1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e141c; --panel:#17202b; --ink:#e8eef6; --muted:#93a2b5; --line:#2a3644;
+  --accent:#4d8ef0; --accent-ink:#06101e; --ok:#4cc27a; --warn:#e7a04b; --bad:#ef6b6b; --soft:#1c2a3d;
+  --ok-soft:#173023; --warn-soft:#33261a; --bad-soft:#3a1d1f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 96px}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-bottom:1px solid var(--line)}
+header .in{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px 0}
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+h1{font-size:16px;margin:0;font-weight:700;letter-spacing:.02em}
+.mode{font-size:12px;color:var(--muted)}
+.counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
+.cnt{background:var(--soft);border-radius:10px;padding:6px 10px}
+.cnt b{display:block;font-family:var(--mono);font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}
+.cnt span{font-size:12px;color:var(--muted)}
+.cnt.me{background:var(--accent);color:var(--accent-ink)}
+.cnt.me span{color:inherit;opacity:.8}
+nav{display:flex;gap:4px}
+nav button{flex:1;border:0;background:none;color:var(--muted);font:inherit;font-weight:600;padding:8px 4px 10px;border-bottom:3px solid transparent;cursor:pointer}
+nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+section{display:flex;flex-direction:column;gap:14px;padding-top:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card h2{font-size:15px;margin:0}
+.hint{font-size:13px;color:var(--muted);margin:0}
+label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+input[type=text],textarea,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;min-width:0}
+textarea{min-height:120px;font-size:13px;font-family:var(--mono)}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.row>*{flex:1 1 140px;min-width:0}
+.btn{font:inherit;font-weight:600;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 14px;cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.shoot{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:96px;font-size:20px;font-weight:700;border-radius:16px;border:0;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.shoot small{display:block;font-size:12px;font-weight:500;opacity:.85}
+#file{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.last{display:flex;gap:12px;align-items:center;border-radius:12px;padding:10px;border:1px solid var(--line);background:var(--panel)}
+.last img{width:72px;height:72px;object-fit:cover;border-radius:8px;flex:none;background:var(--soft)}
+.last .t{min-width:0;flex:1}
+.pid{font-family:var(--mono);font-weight:700;letter-spacing:.01em;word-break:break-all}
+.st{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px}
+.st.ok{background:var(--ok-soft);color:var(--ok)}
+.st.warn{background:var(--warn-soft);color:var(--warn)}
+.st.bad{background:var(--bad-soft);color:var(--bad)}
+.st.mute{background:var(--soft);color:var(--muted)}
+.last.ok{border-color:var(--ok)} .last.warn{border-color:var(--warn)} .last.bad{border-color:var(--bad)}
+video{width:100%;border-radius:12px;background:#000;max-height:46vh;object-fit:cover}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tile{background:var(--soft);border-radius:10px;padding:8px 10px;cursor:pointer;border:2px solid transparent;text-align:left;font:inherit;color:var(--ink)}
+.tile[aria-pressed="true"]{border-color:var(--accent)}
+.tile b{display:block;font-family:var(--mono);font-size:22px;font-variant-numeric:tabular-nums}
+.tile span{font-size:12px;color:var(--muted)}
+.tile.bad b{color:var(--bad)} .tile.warn b{color:var(--warn)} .tile.ok b{color:var(--ok)}
+.list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.it{display:grid;grid-template-columns:56px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start}
+.it img,.it .noimg{width:56px;height:56px;border-radius:8px;object-fit:cover;background:var(--soft)}
+.it .noimg{display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted)}
+.it .b{min-width:0;display:flex;flex-direction:column;gap:4px}
+.meta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.it .ctl{display:flex;gap:6px;flex-wrap:wrap}
+.it .ctl select{width:auto;flex:0 0 auto;padding:6px 8px}
+.it .ctl input{flex:1 1 160px;padding:6px 8px}
+.it.excl{opacity:.45}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;font-size:12px;min-width:640px;width:100%}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+th{background:var(--soft);font-weight:600}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.zoom{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:30;display:flex;align-items:center;justify-content:center;padding:16px}
+.zoom img{max-height:100%;border-radius:8px}
+.pill{font-size:12px;color:var(--muted)}
+.stack{display:flex;flex-direction:column;gap:8px}
+@media (max-width:420px){.tiles{grid-template-columns:repeat(2,1fr)}.cnt b{font-size:20px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header><div class="in">
+  <div class="top"><h1>內湖二手市集盤點</h1><span class="mode" id="mode">連線中…</span></div>
+  <div class="counts">
+    <div class="cnt"><b id="cAll">0</b><span>全部已掃</span></div>
+    <div class="cnt me"><b id="cMe">0</b><span>本機已掃</span></div>
+    <div class="cnt"><b id="cList">–</b><span>未售清單</span></div>
+  </div>
+  <nav role="tablist">
+    <button role="tab" id="t-scan" aria-selected="true" data-tab="scan">掃描</button>
+    <button role="tab" id="t-check" aria-selected="false" data-tab="check">核對・填單</button>
+    <button role="tab" id="t-log" aria-selected="false" data-tab="log">紀錄</button>
+  </nav>
+</div></header>
+
+<div class="wrap">
+<!-- ============ 掃描 ============ -->
+<section id="p-scan">
+  <div class="card" id="whoCard">
+    <div class="row">
+      <label>這支手機負責區域／人員<input type="text" id="who" placeholder="例：A區 帳篷 小黑"></label>
+    </div>
+    <p class="hint">會印在照片上、列在紀錄裡，方便事後追是誰在哪一區掃的。</p>
+  </div>
+
+  <button class="shoot" id="shootBtn" type="button">📷 拍照掃描<small>對準吊牌 QR，靠近拍清楚；一張照片可同時拍多張吊牌</small></button>
+  <input type="file" id="file" accept="image/*" capture="environment">
+
+  <div id="liveBox" class="card" hidden>
+    <video id="video" playsinline muted></video>
+    <div class="row"><button class="btn" id="liveStop" type="button">停止連續掃描</button></div>
+  </div>
+  <button class="btn" id="liveBtn" type="button" hidden>連續掃描（即時相機）</button>
+
+  <div id="lastBox" class="stack"></div>
+
+  <div class="card">
+    <h2>讀不到 QR？手動輸入</h2>
+    <div class="row">
+      <label>商品編號（可只打後 7 碼）<input type="text" id="manual" placeholder="01057MQ 或 I-0988-01057MQ" autocapitalize="characters" autocomplete="off"></label>
+      <button class="btn pri" id="manualBtn" type="button" style="flex:0 0 auto">加入</button>
+    </div>
+    <p class="hint">若剛剛拍的照片讀不到，手動加入時會沿用那張照片當複驗照。</p>
+  </div>
+</section>
+
+<!-- ============ 核對・填單 ============ -->
+<section id="p-check" hidden>
+  <div class="card">
+    <h2>1　匯入未售出清單</h2>
+    <p class="hint">市集結束、確認最後幾筆交易入帳後，在電腦開後台頁面，點書籤「抓未售清單」，按「複製」，貼到下面。也可以貼任何含商品編號的文字（Excel／CSV）。</p>
+    <textarea id="listPaste" placeholder="I-0988-00022XP	2094749592375	14吋兒童腳踏車	2499	1200	2026-10-18 13:10:23"></textarea>
+    <div class="row">
+      <button class="btn pri" id="listParse" type="button">解析並儲存清單</button>
+      <button class="btn" id="listClearAsk" type="button">清除清單</button>
+    </div>
+    <div class="row" id="listClearConfirm" hidden>
+      <span class="hint">確定清除？所有手機都會看到清單被清空。</span>
+      <button class="btn danger" id="listClear" type="button" style="flex:0 0 auto">確定清除</button>
+    </div>
+    <p class="hint" id="listInfo">尚未匯入清單。</p>
+  </div>
+
+  <div class="card">
+    <h2>2　核對結果</h2>
+    <div class="tiles" id="tiles">
+      <button class="tile bad" data-f="missing" aria-pressed="true"><b id="nMissing">0</b><span>清單有・沒掃到</span></button>
+      <button class="tile warn" data-f="extra" aria-pressed="false"><b id="nExtra">0</b><span>掃到・清單沒有</span></button>
+      <button class="tile ok" data-f="matched" aria-pressed="false"><b id="nMatched">0</b><span>相符</span></button>
+      <button class="tile" data-f="dup" aria-pressed="false"><b id="nDup">0</b><span>重複掃描</span></button>
+    </div>
+    <p class="hint" id="filterHint"></p>
+    <input type="text" id="q" placeholder="搜尋編號、名稱、賣家卡號">
+    <div class="list" id="resList"></div>
+  </div>
+
+  <div class="card">
+    <h2>3　回報總部填單</h2>
+    <div class="row">
+      <label>店號<input type="text" id="storeNo" placeholder="0988"></label>
+      <label>夥伴 DKT 號<input type="text" id="dkt" placeholder="例：YTAN10"></label>
+    </div>
+    <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="incExtra"> 「掃到・清單沒有」也列入回報（預設不列）</label>
+    <div class="tbl"><table id="rep"><thead><tr><th>店號</th><th>商品編號</th><th>賣家卡號</th><th>夥伴DKT號</th><th>商品金額(八折前)</th><th>為什麼要補發抵用卡給"賣家"</th><th>夥伴備註</th></tr></thead><tbody></tbody></table></div>
+    <div class="row">
+      <button class="btn pri" id="copyTsv" type="button">複製表格（貼到總部試算表）</button>
+      <button class="btn" id="dlXlsx" type="button">下載 Excel</button>
+    </div>
+    <p class="hint">複製後到總部試算表點「店號」下方第一格貼上，欄位順序已對齊。原因只會填總部下拉選單的四個值：找不到／損壞／人為失誤／其他原因。</p>
+  </div>
+
+  <div class="card">
+    <h2>合併其他手機的紀錄</h2>
+    <p class="hint">若有手機無法同步（例如沒登入），請它在「紀錄」頁按「複製本機編號」用 LINE 傳來，貼在這裡加入。</p>
+    <textarea id="mergePaste" placeholder="貼上含商品編號的任何文字"></textarea>
+    <div class="row"><label>來源標示<input type="text" id="mergeWho" placeholder="例：B區 阿明"></label><button class="btn pri" id="mergeBtn" type="button" style="flex:0 0 auto">加入</button></div>
+  </div>
+</section>
+
+<!-- ============ 紀錄 ============ -->
+<section id="p-log" hidden>
+  <div class="card" id="apiCard" hidden>
+    <h2>多機同步設定</h2>
+    <p class="hint">貼上總召提供的同步網址（Google Apps Script 網址，結尾是 /exec）。用總召傳的連結開啟時會自動帶入。</p>
+    <div class="row">
+      <label>同步網址<input type="text" id="apiUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></label>
+      <button class="btn pri" id="apiSave" type="button" style="flex:0 0 auto">儲存並連線</button>
+    </div>
+    <div class="row"><button class="btn" id="apiShare" type="button">複製給組員的開啟連結</button></div>
+    <p class="hint" id="apiInfo"></p>
+  </div>
+  <div class="card">
+    <div class="row">
+      <label>顯示<select id="logScope"><option value="me">只看本機</option><option value="all">全部手機</option></select></label>
+      <button class="btn" id="copyMine" type="button">複製本機編號</button>
+      <button class="btn" id="resync" type="button">重新上傳本機紀錄</button>
+    </div>
+    <p class="hint" id="syncInfo"></p>
+    <div class="list" id="logList"></div>
+  </div>
+</section>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<div class="zoom" id="zoom" hidden><img id="zoomImg" alt="複驗照片"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@undecaf/zbar-wasm@0.11.0/dist/inlined/index.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const REASONS=["找不到","損壞","人為失誤","其他原因"];
+const PID_RE=/([A-Z])\s*-\s*(\d{4})\s*-\s*(\d{5}[A-Z0-9]{2})/g;
+const normPid=(a,b,c)=>`${a}-${b}-${c}`;
+
+/* ---------- local storage helpers ---------- */
+const LS={get(k,d){try{const v=localStorage.getItem("inv26:"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+          set(k,v){try{localStorage.setItem("inv26:"+k,JSON.stringify(v))}catch(e){}}};
+let device=LS.get("device",null); if(!device){device="d"+Math.random().toString(36).slice(2,9);LS.set("device",device)}
+$("#who").value=LS.get("who","");
+$("#who").addEventListener("input",e=>LS.set("who",e.target.value.trim()));
+
+/* photos kept on this phone too (IndexedDB) */
+let idb=null;
+function openIdb(){return new Promise(res=>{try{const r=indexedDB.open("inv26",1);r.onupgradeneeded=()=>r.result.createObjectStore("photos");r.onsuccess=()=>res(r.result);r.onerror=()=>res(null)}catch(e){res(null)}})}
+async function idbPut(k,v){if(!idb)return;try{await new Promise((ok,no)=>{const t=idb.transaction("photos","readwrite");t.objectStore("photos").put(v,k);t.oncomplete=ok;t.onerror=no})}catch(e){}}
+async function idbGet(k){if(!idb)return null;try{return await new Promise(ok=>{const r=idb.transaction("photos").objectStore("photos").get(k);r.onsuccess=()=>ok(r.result||null);r.onerror=()=>ok(null)})}catch(e){return null}}
+
+/* ---------- state ---------- */
+const S={
+  scans:new Map(),    // pid -> {pid,who,device,t,photo,src,dups:[]}
+  items:[],           // [{id,card,name,orig,price,time}]
+  listMeta:null,
+  issues:{},          // pid -> {reason,note,excl}
+  report:{store:"",dkt:""},
+  local:LS.get("myScans",[]), // own scans [{pid,who,device,t,photo,synced}]
+  filter:"missing", tab:"scan"
+};
+let db=null, assets=null, downloads=null;
+/* gas = Google Apps Script web app used when this page is hosted outside Claude (GitHub Pages) */
+let gas=null, gasTimer=null, gasOk=null;
+
+/* ---------- capabilities ---------- */
+(async()=>{
+  idb=await openIdb();
+  try{ if(window.claude&&claude.use){
+    const [d,a,dl]=await Promise.all([claude.use("db"),claude.use("assets"),claude.use("downloads")]);
+    db=d; assets=a; downloads=dl;
+  }}catch(e){}
+  if(db){ $("#mode").textContent="多機同步中"; subscribe(); syncLocal(); }
+  else {
+    $("#apiCard").hidden=false;
+    let q=null; try{q=new URLSearchParams(location.search).get("api")}catch(e){}
+    if(q&&/^https:\/\/script\.google(usercontent)?\.com\//.test(q)) LS.set("api",q);
+    gas=LS.get("api",null)||"https://script.google.com/macros/s/AKfycbyEGYTTHn7VRPRK6ko3ej1ZWZkM00ua_HteHgEbgtbokhqHACnpLxu5YDfFTjQkUWdyAQ/exec"; $("#apiUrl").value=gas||"";
+    loadLocalMode();
+    if(gas) startGas(); else $("#mode").textContent="單機模式（未同步）";
+  }
+  render();
+})();
+
+async function gasPost(body){
+  const r=await fetch(gas,{method:"POST",body:JSON.stringify(body)}); // text/plain: no CORS preflight
+  const j=await r.json(); if(!j.ok) throw new Error(j.error||"伺服器錯誤"); return j;
+}
+async function gasPull(){
+  if(!gas||document.hidden) return;
+  try{
+    const r=await fetch(gas+(gas.includes("?")?"&":"?")+"action=list&_="+Date.now()); const j=await r.json();
+    if(!j.ok) throw new Error(j.error||"讀取失敗");
+    const m=new Map();
+    for(const s of j.rows) m.set(s.pid,{...s,dups:s.dups||[]});
+    for(const l of S.local) if(!l.synced&&!m.has(l.pid)) m.set(l.pid,{...l,dups:[]});
+    for(const s of LS.get("merged",[])) if(!m.has(s.pid)) m.set(s.pid,s);
+    S.scans=m; gasOk=Date.now();
+    $("#mode").textContent="多機同步中（Google 試算表）";
+    $("#apiInfo").innerHTML=j.sheet?`已連線。掃描紀錄試算表：<a href="${esc(j.sheet)}" target="_blank" rel="noopener">開啟</a>`:"已連線。";
+    render();
+  }catch(e){ $("#mode").textContent="同步失敗，稍後自動重試"; $("#apiInfo").textContent="連線失敗："+(e.message||e)+"。請確認網址正確，且 Apps Script 已部署為「任何人」可存取。"; }
+}
+function startGas(){ clearInterval(gasTimer); $("#mode").textContent="連線中…"; gasPull().then(syncLocal); gasTimer=setInterval(gasPull,6000); }
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&gas) gasPull(); });
+$("#apiSave").addEventListener("click",()=>{
+  const v=$("#apiUrl").value.trim();
+  if(v&&!/^https:\/\/script\.google(usercontent)?\.com\/.+/.test(v)){toast("網址應該是 https://script.google.com/macros/s/…/exec");return}
+  gas=v||null; LS.set("api",gas); if(gas) startGas(); else {clearInterval(gasTimer);$("#mode").textContent="單機模式（未同步）"}
+});
+$("#apiShare").addEventListener("click",()=>{
+  if(!gas){toast("先儲存同步網址");return}
+  const link=location.origin+location.pathname+"?api="+encodeURIComponent(gas);
+  navigator.clipboard.writeText(link).then(()=>toast("已複製，貼到 LINE 群組給組員")).catch(()=>{$("#apiUrl").value=link;$("#apiUrl").select();toast("請手動複製網址欄")});
+});
+function blobToB64(b){return new Promise(ok=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]);r.onerror=()=>ok(null);r.readAsDataURL(b)})}
+
+function loadLocalMode(){
+  S.items=LS.get("items",[]); S.listMeta=LS.get("listMeta",null); S.issues=LS.get("issues",{});
+  S.report=LS.get("report",{store:"",dkt:""});
+  for(const s of LS.get("merged",[])) addScanToMap(s);
+  for(const s of S.local) addScanToMap(s);
+}
+function addScanToMap(s){
+  const cur=S.scans.get(s.pid);
+  if(!cur){S.scans.set(s.pid,{...s,dups:s.dups||[]});return}
+  if(cur.device!==s.device||cur.t!==s.t){ if(!cur.dups.some(d=>d.t===s.t&&d.device===s.device)) cur.dups.push({who:s.who,device:s.device,t:s.t}); }
+}
+
+function subscribe(){
+  const err=e=>toast("同步錯誤："+(e&&e.message||e));
+  db.collection("scans").onSnapshot(snap=>{
+    S.scans=new Map(); for(const d of snap.docs){const v=d.data(); if(v&&v.pid) S.scans.set(v.pid,{...v,dups:v.dups||[]})}
+    render();
+  },err);
+  db.collection("items").onSnapshot(snap=>{
+    const chunks=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.i||0)-(b.i||0));
+    S.items=[].concat(...chunks.map(c=>c.rows||[])); render();
+  },err);
+  db.collection("meta").onSnapshot(snap=>{
+    for(const d of snap.docs){ if(d.id==="list") S.listMeta=d.data(); if(d.id==="report"){S.report={...S.report,...d.data()}} }
+    if(!snap.docs.some(d=>d.id==="list")) S.listMeta=null;
+    render();
+  },err);
+  db.collection("issues").onSnapshot(snap=>{S.issues={};for(const d of snap.docs)S.issues[d.id]=d.data();render()},err);
+}
+
+/* ---------- QR decoding ---------- */
+function loadImg(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file);const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=u})}
+function frame(src,sw,sh,maxW,crop){
+  const cw=sw*crop,ch=sh*crop,cx=(sw-cw)/2,cy=(sh-ch)/2;
+  const sc=Math.min(1,maxW/cw), w=Math.round(cw*sc), h=Math.round(ch*sc);
+  const c=document.createElement("canvas");c.width=w;c.height=h;
+  const g=c.getContext("2d",{willReadFrequently:true});g.drawImage(src,cx,cy,cw,ch,0,0,w,h);
+  return g.getImageData(0,0,w,h);
+}
+function pidsFrom(texts){
+  const out=new Set();
+  for(const t of texts){ if(!t)continue;
+    const m=String(t).match(/pid=([A-Za-z]-\d{4}-\d{5}[A-Za-z0-9]{2})/); if(m){out.add(m[1].toUpperCase());continue}
+    const up=String(t).toUpperCase(); PID_RE.lastIndex=0; let r; while((r=PID_RE.exec(up))) out.add(normPid(r[1],r[2],r[3]));
+  }
+  return [...out];
+}
+async function decodeSource(src,sw,sh){
+  if("BarcodeDetector" in window){
+    try{const bd=new BarcodeDetector({formats:["qr_code"]});const r=await bd.detect(src);const p=pidsFrom(r.map(x=>x.rawValue));if(p.length)return p}catch(e){}
+  }
+  const passes=[[1200,1],[800,1],[1600,1],[1000,.6],[2000,1],[1200,.8]];
+  for(const [w,c] of passes){
+    const im=frame(src,sw,sh,w,c);
+    if(window.zbarWasm){try{const r=await zbarWasm.scanImageData(im);const p=pidsFrom(r.map(x=>x.decode()));if(p.length)return p}catch(e){}}
+    if(window.jsQR){try{const r=jsQR(im.data,im.width,im.height,{inversionAttempts:"attemptBoth"});const p=pidsFrom([r&&r.data]);if(p.length)return p}catch(e){}}
+  }
+  return [];
+}
+
+/* evidence photo: downscaled, stamped with id/time/who */
+function stampPhoto(src,sw,sh,pids){
+  const max=1000, sc=Math.min(1,max/Math.max(sw,sh)), w=Math.round(sw*sc), h=Math.round(sh*sc);
+  const c=document.createElement("canvas");c.width=w;c.height=h+Math.round(w*.11);
+  const g=c.getContext("2d");g.fillStyle="#000";g.fillRect(0,0,c.width,c.height);g.drawImage(src,0,0,sw,sh,0,0,w,h);
+  const fs=Math.round(w*.04);g.fillStyle="#fff";g.font=`700 ${fs}px monospace`;
+  g.fillText((pids.join(" ")||"未讀到編號").slice(0,60),fs*.5,h+fs*1.2);
+  g.font=`${Math.round(fs*.8)}px sans-serif`;g.fillText(`${fmtTime(Date.now(),true)}  ${whoName()}`,fs*.5,h+fs*2.3);
+  return new Promise(ok=>c.toBlob(b=>ok(b),"image/jpeg",.72));
+}
+
+/* ---------- scanning ---------- */
+let pendingPhoto=null; // photo whose QR failed, reused for manual entry
+const busy={v:false};
+$("#shootBtn").addEventListener("click",()=>{ if(!whoName(true))return; $("#file").value=""; $("#file").click(); });
+$("#file").addEventListener("change",async e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f)return;
+  busy.v=true; showLast({state:"mute",title:"辨識中…",sub:""});
+  try{
+    const img=await loadImg(f); const sw=img.naturalWidth, sh=img.naturalHeight;
+    const pids=await decodeSource(img,sw,sh);
+    const photo=await stampPhoto(img,sw,sh,pids);
+    URL.revokeObjectURL(img.src);
+    if(!pids.length){
+      pendingPhoto=photo; beep(false);
+      showLast({state:"bad",title:"讀不到 QR",sub:"請靠近重拍，或在下方手動輸入編號（會沿用這張照片）",photo});
+      $("#manual").focus(); return;
+    }
+    for(const p of pids) await recordScan(p,photo);
+  }catch(err){showLast({state:"bad",title:"照片讀取失敗",sub:String(err&&err.message||err)})}
+  finally{busy.v=false}
+});
+$("#manualBtn").addEventListener("click",manualAdd);
+$("#manual").addEventListener("keydown",e=>{if(e.key==="Enter")manualAdd()});
+function manualAdd(){
+  if(!whoName(true))return;
+  let v=$("#manual").value.trim().toUpperCase().replace(/\s+/g,"");
+  if(/^\d{5}[A-Z0-9]{2}$/.test(v)) v=`I-${storeNo()}-${v}`;
+  const p=pidsFrom([v]); if(!p.length){toast("編號格式不對，例：I-0988-01057MQ");return}
+  recordScan(p[0],pendingPhoto,"手動"); pendingPhoto=null; $("#manual").value="";
+}
+
+async function recordScan(pid,photoBlob,how){
+  const t=Date.now(), who=whoName();
+  const existing=S.scans.get(pid);
+  const item=itemById(pid);
+  if(existing){
+    beep(false); vib([60,60,60]);
+    showLast({state:"warn",title:pid,sub:`已掃過（${existing.who||"?"} ${fmtTime(existing.t)}），不重複計數`+(item?`｜${item.name}`:""),photo:photoBlob});
+    if(existing.device!==device && db){ try{ await db.collection("scans").doc(pid).update({dups:[...(existing.dups||[]),{who,device,t}]}) }catch(e){} }
+    if(existing.device!==device && gas){ gasPost({action:"scan",pid,who,device,t,src:how||"QR"}).catch(()=>{}) }
+    return;
+  }
+  const rec={pid,who,device,t,photo:null,src:how||"QR"};
+  if(photoBlob) await idbPut(pid,photoBlob);
+  S.local.push({...rec,synced:false}); LS.set("myScans",S.local);
+  S.scans.set(pid,{...rec,dups:[]});
+  beep(true); vib(80);
+  const onList=!S.items.length?null:!!item;
+  showLast({state:onList===false?"warn":"ok",title:pid,
+    sub:item?`${item.name}｜牌價 ${item.price}`:(onList===false?"⚠ 不在未售清單：可能已售出未取貨，請放待處理區":"已記錄（清單尚未匯入，之後自動比對）"),photo:photoBlob});
+  render();
+  pushScan(rec,photoBlob);
+}
+async function pushScan(rec,photoBlob){
+  if(gas&&!db){
+    try{
+      const photo=photoBlob?await blobToB64(photoBlob):null;
+      const j=await gasPost({action:"scan",pid:rec.pid,who:rec.who,device:rec.device,t:rec.t,src:rec.src,photo});
+      const l=S.local.find(x=>x.pid===rec.pid&&x.t===rec.t); if(l){l.synced=true;LS.set("myScans",S.local)}
+      if(j.dup&&j.first&&j.first.device!==device) toast(`${rec.pid} 其他手機已先掃過（${j.first.who}）`);
+    }catch(e){}
+    renderSync(); return;
+  }
+  if(!db)return;
+  try{
+    if(photoBlob&&assets){ try{const up=await assets.upload(photoBlob);rec.photo=up.id}catch(e){} }
+    await db.collection("scans").doc(rec.pid).set({pid:rec.pid,who:rec.who,device:rec.device,t:rec.t,photo:rec.photo||null,src:rec.src,dups:[]});
+    const l=S.local.find(x=>x.pid===rec.pid&&x.t===rec.t); if(l){l.synced=true;l.photo=rec.photo||null;LS.set("myScans",S.local)}
+    renderSync();
+  }catch(e){ renderSync(); }
+}
+async function syncLocal(){
+  if(!db&&!gas)return;
+  for(const r of S.local.filter(x=>!x.synced)){ const b=await idbGet(r.pid); await pushScan({...r},b); }
+}
+$("#resync").addEventListener("click",async()=>{
+  if(!db&&!gas){toast("單機模式無法上傳，請用「複製本機編號」傳給總召");return}
+  S.local.forEach(r=>{ if(!S.scans.has(r.pid)) r.synced=false }); await syncLocal(); toast("已重新上傳");
+});
+
+/* live camera (works when this file runs as a normal web page; artifact frames refuse the camera) */
+let stream=null, liveTimer=null, lastLive={pid:"",t:0};
+if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia) $("#liveBtn").hidden=false;
+$("#liveBtn").addEventListener("click",async()=>{
+  if(!whoName(true))return;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1920}},audio:false});
+    const v=$("#video"); v.srcObject=stream; await v.play(); $("#liveBox").hidden=false; $("#liveBtn").hidden=true;
+    liveLoop();
+  }catch(e){ $("#liveBtn").hidden=true; toast("這個環境不能開即時相機，請用「拍照掃描」"); }
+});
+$("#liveStop").addEventListener("click",stopLive);
+function stopLive(){ clearTimeout(liveTimer); if(stream)stream.getTracks().forEach(t=>t.stop()); stream=null; $("#liveBox").hidden=true; $("#liveBtn").hidden=false; }
+async function liveLoop(){
+  const v=$("#video"); if(!stream)return;
+  if(v.videoWidth && !busy.v){
+    let p=[];
+    if("BarcodeDetector" in window){try{const r=await new BarcodeDetector({formats:["qr_code"]}).detect(v);p=pidsFrom(r.map(x=>x.rawValue))}catch(e){}}
+    if(!p.length&&window.jsQR){const im=frame(v,v.videoWidth,v.videoHeight,900,1);const r=jsQR(im.data,im.width,im.height,{inversionAttempts:"dontInvert"});p=pidsFrom([r&&r.data])}
+    const now=Date.now(), fresh=p.filter(x=>!(x===lastLive.pid&&now-lastLive.t<4000));
+    if(fresh.length){ busy.v=true; lastLive={pid:fresh[0],t:now};
+      const photo=await stampPhoto(v,v.videoWidth,v.videoHeight,fresh); for(const x of fresh) await recordScan(x,photo); busy.v=false; }
+  }
+  liveTimer=setTimeout(liveLoop,250);
+}
+
+/* ---------- list import ---------- */
+function parseList(text){
+  const up=text.replace(/\r/g,"");
+  const hits=[]; PID_RE.lastIndex=0; let m;
+  const U=up.toUpperCase();
+  while((m=PID_RE.exec(U))) hits.push({id:normPid(m[1],m[2],m[3]),start:m.index,end:m.index+m[0].length});
+  const rows=[], seen=new Set();
+  hits.forEach((h,i)=>{
+    if(seen.has(h.id))return; seen.add(h.id);
+    let seg=up.slice(h.end, i+1<hits.length?hits[i+1].start:up.length);
+    const card=(seg.match(/\b(20\d{11})\b/)||[])[1]||"";
+    const dm=seg.match(/(\d{4}-\d{2}-\d{2})(?:\s+(\d{1,2}:\d{2}(?::\d{2})?))?/);
+    const time=dm?(dm[1]+(dm[2]?" "+dm[2]:"")):"";
+    let mid=seg; if(card)mid=mid.slice(mid.indexOf(card)+card.length); if(dm)mid=mid.slice(0,mid.indexOf(dm[0]));
+    const toks=mid.split(/[\t\n]+|\s{2,}/).map(s=>s.trim()).filter(Boolean);
+    const nums=[]; while(toks.length&&/^[\d,]+$/.test(toks[toks.length-1])&&nums.length<2) nums.unshift(toks.pop().replace(/,/g,""));
+    let name=toks.join(" ").replace(/\s+/g," ").trim();
+    if(nums.length<2){ const mm=name.match(/^(.*?)\s+([\d,]+)\s+([\d,]+)$/); if(mm){name=mm[1];nums.splice(0,nums.length,mm[2].replace(/,/g,""),mm[3].replace(/,/g,""))} }
+    const row={id:h.id,card,name,orig:nums.length===2?+nums[0]:null,price:nums.length?+nums[nums.length-1]:null,time};
+    if(/吊牌未列印/.test(seg)) row.noTag=true;
+    rows.push(row);
+  });
+  const cm=text.match(/商品數量\s*[:：]\s*(\d+)/);
+  return {rows,headerCount:cm?+cm[1]:null};
+}
+window.__parseList=parseList;
+$("#listParse").addEventListener("click",async()=>{
+  const {rows,headerCount}=parseList($("#listPaste").value);
+  if(!rows.length){toast("沒找到任何商品編號");return}
+  const meta={count:rows.length,headerCount,at:Date.now(),by:whoName()};
+  if(db){
+    try{
+      const old=await db.collection("items").get(); for(const d of old.docs) await db.collection("items").doc(d.id).delete();
+      for(let i=0;i*100<rows.length;i++) await db.collection("items").doc("c"+i).set({i,rows:rows.slice(i*100,i*100+100)});
+      await db.collection("meta").doc("list").set(meta);
+    }catch(e){toast("儲存清單失敗："+(e.message||e));return}
+  }else{ S.items=rows; S.listMeta=meta; LS.set("items",rows); LS.set("listMeta",meta); render(); }
+  $("#listPaste").value="";
+  toast(`已匯入 ${rows.length} 件`+(headerCount&&headerCount!==rows.length?`（頁首寫 ${headerCount} 件，請檢查）`:""));
+});
+$("#listClearAsk").addEventListener("click",()=>{$("#listClearConfirm").hidden=false});
+$("#listClear").addEventListener("click",async()=>{
+  $("#listClearConfirm").hidden=true;
+  if(db){try{const old=await db.collection("items").get();for(const d of old.docs)await db.collection("items").doc(d.id).delete();await db.collection("meta").doc("list").delete()}catch(e){}}
+  else{S.items=[];S.listMeta=null;LS.set("items",[]);LS.set("listMeta",null);render()}
+});
+
+/* merge from other phones */
+$("#mergeBtn").addEventListener("click",async()=>{
+  const p=pidsFrom([$("#mergePaste").value]); if(!p.length){toast("沒找到商品編號");return}
+  const who=$("#mergeWho").value.trim()||"合併"; let n=0;
+  for(const pid of p){ if(S.scans.has(pid))continue; n++;
+    const rec={pid,who,device:"merge",t:Date.now(),photo:null,src:"合併",dups:[]};
+    if(db){try{await db.collection("scans").doc(pid).set(rec)}catch(e){}}
+    else if(gas){S.scans.set(pid,rec);try{await gasPost({action:"scan",pid,who,device:"merge",t:rec.t,src:"合併"})}catch(e){const mg=LS.get("merged",[]);mg.push(rec);LS.set("merged",mg)}}
+    else{S.scans.set(pid,rec);const mg=LS.get("merged",[]);mg.push(rec);LS.set("merged",mg)}
+  }
+  $("#mergePaste").value=""; render(); toast(`加入 ${n} 件，${p.length-n} 件已存在`);
+});
+
+/* ---------- issues / report ---------- */
+function setIssue(pid,patch){
+  const cur={reason:"找不到",note:"",excl:false,...(S.issues[pid]||{}),...patch};
+  S.issues[pid]=cur;
+  if(db){ db.collection("issues").doc(pid).set(cur).catch(()=>{}) } else LS.set("issues",S.issues);
+  renderReport();
+}
+function setReport(patch){
+  S.report={...S.report,...patch};
+  if(db) db.collection("meta").doc("report").set(S.report).catch(()=>{}); else LS.set("report",S.report);
+  renderReport();
+}
+let repT=null;
+$("#storeNo").addEventListener("input",e=>{clearTimeout(repT);repT=setTimeout(()=>setReport({store:e.target.value.trim()}),500)});
+$("#dkt").addEventListener("input",e=>{clearTimeout(repT);repT=setTimeout(()=>setReport({dkt:e.target.value.trim().toUpperCase()}),500)});
+$("#incExtra").addEventListener("change",renderReport);
+
+function storeNo(){ return S.report.store || (S.items[0]&&S.items[0].id.split("-")[1]) || "0988"; }
+function reportRows(){
+  const out=[];
+  const {missing,extra}=classify();
+  const add=(pid,it,defReason)=>{ const is={reason:defReason,note:"",excl:false,...(S.issues[pid]||{})}; if(is.excl)return;
+    out.push([storeNo(),pid,it?it.card:"",S.report.dkt||"",it&&it.price!=null?it.price:"",is.reason,is.note]); };
+  missing.forEach(it=>add(it.id,it,"找不到"));
+  if($("#incExtra").checked) extra.forEach(s=>add(s.pid,null,"其他原因"));
+  return out;
+}
+$("#copyTsv").addEventListener("click",()=>{
+  const rows=reportRows(); if(!rows.length){toast("沒有要回報的商品");return}
+  const tsv=rows.map(r=>r.map(c=>String(c).replace(/[\t\n]/g," ")).join("\t")).join("\n");
+  navigator.clipboard.writeText(tsv).then(()=>toast(`已複製 ${rows.length} 列`)).catch(()=>{
+    const ta=$("#mergePaste"); ta.value=tsv; ta.select(); toast("無法直接複製，已放到下方文字框並選取，請手動複製");
+  });
+});
+$("#dlXlsx").addEventListener("click",async()=>{
+  const rows=reportRows(); if(!rows.length){toast("沒有要回報的商品");return}
+  if(!window.XLSX){toast("Excel 元件沒載入，請改用複製表格");return}
+  const head=["店號","商品編號","賣家卡號","夥伴DKT號","商品金額(八折前)\n如果確定是八折時段售出、請填八折價格",'為什麼要補發抵用卡給"賣家"',"夥伴備註"];
+  const ws=XLSX.utils.aoa_to_sheet([head,...rows]); ws["!cols"]=[8,18,16,12,16,20,40].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"盤點回報");
+  const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  const name=`內湖店_二手市集盤點回報_${new Date().toISOString().slice(0,10)}.xlsx`;
+  const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  if(downloads){try{await downloads.save({filename:name,data:blob});return}catch(e){if(e&&e.code==="cancelled")return}}
+  if(!window.claude){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();return}
+  toast("這個檢視不能下載檔案，請改用「複製表格」");
+});
+
+/* ---------- classification ---------- */
+function itemById(pid){ if(!S._idx||S._idxN!==S.items){S._idx=new Map(S.items.map(i=>[i.id,i]));S._idxN=S.items} return S._idx.get(pid); }
+function classify(){
+  const missing=[],matched=[],extra=[],dup=[];
+  for(const it of S.items){ (S.scans.has(it.id)?matched:missing).push(it) }
+  for(const s of S.scans.values()){ if(S.items.length&&!itemById(s.pid)) extra.push(s); if(s.dups&&s.dups.length) dup.push(s) }
+  return {missing,matched,extra,dup};
+}
+
+/* ---------- rendering ---------- */
+function whoName(require){ const w=$("#who").value.trim(); if(require&&!w){toast("先填這支手機負責的區域／人員");$("#who").focus();return ""} return w||"未命名"; }
+function fmtTime(t,full){ const d=new Date(t); const p=n=>String(n).padStart(2,"0"); return (full?`${d.getMonth()+1}/${d.getDate()} `:"")+`${p(d.getHours())}:${p(d.getMinutes())}`+(full?`:${p(d.getSeconds())}`:""); }
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+const urlCache=new Map();
+async function photoUrl(s){
+  if(urlCache.has(s.pid))return urlCache.get(s.pid);
+  let u=null; const b=await idbGet(s.pid);
+  if(b) u=URL.createObjectURL(b); else if(s.photoUrl) u=s.photoUrl; else if(s.photo&&db) u="/_blob/"+s.photo;
+  if(u) urlCache.set(s.pid,u); return u;
+}
+function showLast({state,title,sub,photo}){
+  const box=$("#lastBox"); const d=document.createElement("div"); d.className="last "+state;
+  const u=photo?URL.createObjectURL(photo):null;
+  d.innerHTML=`${u?`<img alt="" src="${u}">`:""}<div class="t"><div class="pid">${esc(title)}</div><div class="meta">${esc(sub)}</div></div>`;
+  if(u) d.querySelector("img").addEventListener("click",()=>zoom(u));
+  box.prepend(d); while(box.children.length>4) box.lastChild.remove();
+}
+function render(){
+  $("#cAll").textContent=S.scans.size;
+  $("#cMe").textContent=[...S.scans.values()].filter(s=>s.device===device).length;
+  $("#cList").textContent=S.items.length||"–";
+  const lm=S.listMeta;
+  $("#listInfo").textContent=lm?`目前清單 ${S.items.length} 件（${fmtTime(lm.at,true)} 由 ${lm.by||"?"} 匯入${lm.headerCount?`；頁首商品數量 ${lm.headerCount}`:""}）`:"尚未匯入清單。";
+  if(document.activeElement!==$("#storeNo")) $("#storeNo").value=S.report.store||"";
+  if(document.activeElement!==$("#dkt")) $("#dkt").value=S.report.dkt||"";
+  const c=classify();
+  $("#nMissing").textContent=c.missing.length; $("#nExtra").textContent=c.extra.length; $("#nMatched").textContent=c.matched.length; $("#nDup").textContent=c.dup.length;
+  if(S.tab==="check") renderResults(c);
+  if(S.tab==="log") renderLog();
+  renderReport(); renderSync();
+}
+const FH={missing:"清單上有、但沒人掃到：先拿這份清單回現場再找一輪，真的找不到再選原因回報。掃到的會自動從這裡消失。",
+          extra:"有吊牌、但不在未售清單：多半是已結帳未取貨，或結帳後吊牌沒撕。請核對交易後處理，必要時勾選列入回報。",
+          matched:"清單與現場一致。",dup:"被不同手機重複掃到的商品（只算一次）。"};
+async function renderResults(c){
+  c=c||classify(); const q=$("#q").value.trim().toUpperCase();
+  $("#filterHint").textContent=S.items.length?FH[S.filter]:"還沒匯入未售清單，先完成步驟 1。";
+  let rows=[];
+  if(S.filter==="missing") rows=c.missing.map(it=>({pid:it.id,it}));
+  if(S.filter==="matched") rows=c.matched.map(it=>({pid:it.id,it,s:S.scans.get(it.id)}));
+  if(S.filter==="extra") rows=c.extra.map(s=>({pid:s.pid,s}));
+  if(S.filter==="dup") rows=c.dup.map(s=>({pid:s.pid,s,it:itemById(s.pid)}));
+  if(q) rows=rows.filter(r=>(r.pid+" "+(r.it?r.it.name+" "+r.it.card:"")).toUpperCase().includes(q));
+  const box=$("#resList"); box.innerHTML="";
+  const lim=rows.slice(0,300);
+  for(const r of lim){
+    const d=document.createElement("div"); const is={reason:S.filter==="extra"?"其他原因":"找不到",note:"",excl:false,...(S.issues[r.pid]||{})};
+    d.className="it"+(is.excl&&(S.filter==="missing"||S.filter==="extra")?" excl":"");
+    const it=r.it, s=r.s;
+    let html=`<div class="noimg">${s?"載入":"無照片"}</div><div class="b"><div><span class="pid">${esc(r.pid)}</span></div>`;
+    if(it) html+=`<div>${esc(it.name)}${it.noTag?` <span class="st warn">吊牌未列印</span>`:""}</div><div class="meta">賣家 ${esc(it.card)}｜原價 ${esc(it.orig??"–")}｜牌價 ${esc(it.price??"–")}</div>`;
+    if(s) html+=`<div class="meta">${esc(s.who)} ${fmtTime(s.t,true)}${s.dups&&s.dups.length?`｜另由 ${s.dups.map(x=>esc(x.who)).join("、")} 掃到`:""}</div>`;
+    if(S.filter==="missing"||S.filter==="extra"){
+      html+=`<div class="ctl"><select aria-label="原因">${REASONS.map(x=>`<option${x===is.reason?" selected":""}>${x}</option>`).join("")}</select>
+        <input type="text" aria-label="備註" placeholder="夥伴備註" value="${esc(is.note)}">
+        <button class="btn" type="button">${is.excl?"列入回報":"不回報"}</button></div>`;
+    }
+    html+=`</div>`; d.innerHTML=html; box.appendChild(d);
+    if(S.filter==="missing"||S.filter==="extra"){
+      d.querySelector("select").addEventListener("change",e=>setIssue(r.pid,{reason:e.target.value}));
+      let nt=null; d.querySelector("input").addEventListener("input",e=>{clearTimeout(nt);const v=e.target.value;nt=setTimeout(()=>setIssue(r.pid,{note:v}),600)});
+      d.querySelector("button").addEventListener("click",()=>{setIssue(r.pid,{excl:!is.excl});renderResults()});
+    }
+    if(s) photoUrl(s).then(u=>{const ph=d.firstChild; if(u){const im=document.createElement("img");im.src=u;im.alt="複驗照片";im.addEventListener("click",()=>zoom(u));ph.replaceWith(im)}else ph.textContent="無照片"});
+  }
+  if(rows.length>lim.length){const m=document.createElement("p");m.className="hint";m.textContent=`還有 ${rows.length-lim.length} 筆，請用搜尋縮小範圍。`;box.appendChild(m)}
+  if(!rows.length){const m=document.createElement("p");m.className="hint";m.style.padding="10px 0";m.textContent=S.items.length||S.filter==="dup"?"沒有資料。":"";box.appendChild(m)}
+}
+function renderReport(){
+  const tb=$("#rep tbody"); const rows=reportRows();
+  tb.innerHTML=rows.length?rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join(""):`<tr><td colspan="7" class="meta">目前沒有要回報的商品</td></tr>`;
+}
+function renderSync(){
+  const pend=S.local.filter(x=>!x.synced).length;
+  $("#syncInfo").textContent=(db||gas)?(pend?`本機有 ${pend} 筆尚未上傳（網路恢復後按「重新上傳本機紀錄」）`:"本機紀錄都已同步。"):"單機模式：紀錄只存在這支手機。掃完請按「複製本機編號」用 LINE 傳給總召合併。";
+}
+async function renderLog(){
+  const scope=$("#logScope").value;
+  let list=[...S.scans.values()]; if(scope==="me") list=list.filter(s=>s.device===device);
+  list.sort((a,b)=>b.t-a.t);
+  const box=$("#logList"); box.innerHTML="";
+  for(const s of list.slice(0,300)){
+    const it=itemById(s.pid); const d=document.createElement("div"); d.className="it";
+    const tag=!S.items.length?`<span class="st mute">待比對</span>`:it?`<span class="st ok">在清單</span>`:`<span class="st warn">清單外</span>`;
+    d.innerHTML=`<div class="noimg">…</div><div class="b"><div><span class="pid">${esc(s.pid)}</span> ${tag}</div>
+      ${it?`<div>${esc(it.name)}｜牌價 ${esc(it.price)}</div>`:""}<div class="meta">${esc(s.who)} ${fmtTime(s.t,true)}｜${esc(s.src||"QR")}</div>
+      ${s.device===device?`<div class="ctl"><button class="btn" type="button">刪除這筆</button></div>`:""}</div>`;
+    box.appendChild(d);
+    const del=d.querySelector("button");
+    if(del) del.addEventListener("click",async()=>{
+      if(del.dataset.arm!=="1"){del.dataset.arm="1";del.textContent="再按一次確認刪除";del.classList.add("danger");return}
+      S.local=S.local.filter(x=>x.pid!==s.pid); LS.set("myScans",S.local); S.scans.delete(s.pid);
+      if(db){try{await db.collection("scans").doc(s.pid).delete()}catch(e){}}
+      if(gas){try{await gasPost({action:"delete",pid:s.pid,device})}catch(e){toast("伺服器刪除失敗，請稍後再試")}}
+      render(); toast("已刪除 "+s.pid);
+    });
+    photoUrl(s).then(u=>{const ph=d.firstChild;if(u){const im=document.createElement("img");im.src=u;im.alt="複驗照片";im.addEventListener("click",()=>zoom(u));ph.replaceWith(im)}else ph.textContent="無照片"});
+  }
+  if(!list.length) box.innerHTML=`<p class="hint" style="padding:10px 0">還沒有掃描紀錄。到「掃描」頁按「拍照掃描」開始。</p>`;
+}
+$("#logScope").addEventListener("change",renderLog);
+$("#copyMine").addEventListener("click",()=>{
+  const mine=[...S.scans.values()].filter(s=>s.device===device).map(s=>s.pid);
+  if(!mine.length){toast("本機還沒有紀錄");return}
+  const txt=`${whoName()} 共 ${mine.length} 件\n`+mine.join("\n");
+  navigator.clipboard.writeText(txt).then(()=>toast(`已複製 ${mine.length} 筆`)).catch(()=>toast("複製失敗，請截圖紀錄頁"));
+});
+$("#q").addEventListener("input",()=>renderResults());
+document.querySelectorAll("#tiles .tile").forEach(b=>b.addEventListener("click",()=>{
+  S.filter=b.dataset.f; document.querySelectorAll("#tiles .tile").forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false")); renderResults();
+}));
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{
+  S.tab=b.dataset.tab; document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x===b?"true":"false"));
+  for(const t of ["scan","check","log"]) $("#p-"+t).hidden=t!==S.tab;
+  if(S.tab!=="scan"&&stream) stopLive(); render();
+}));
+
+/* ---------- feedback ---------- */
+let actx=null;
+function beep(ok){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=ok?1320:330;g.gain.value=.12;o.connect(g);g.connect(actx.destination);o.start();o.stop(actx.currentTime+(ok?.12:.3))}catch(e){}}
+function vib(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+let tt=null;
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2600)}
+function zoom(u){$("#zoomImg").src=u;$("#zoom").hidden=false}
+$("#zoom").addEventListener("click",()=>$("#zoom").hidden=true);
+})();
+</script>
+</body></html>
