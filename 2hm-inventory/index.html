@@ -86,6 +86,12 @@ table{border-collapse:collapse;font-size:12px;min-width:640px;width:100%}
 th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
 th{background:var(--soft);font-weight:600}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.flash{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center;pointer-events:none;color:#fff;animation:fl 1.3s ease-out forwards}
+.flash.ok{background:rgba(22,131,63,.92)} .flash.warn{background:rgba(196,110,8,.94)} .flash.bad{background:rgba(197,42,42,.94)}
+.flash .big{font-size:64px;line-height:1;font-weight:800}
+.flash .pid{font-size:26px} .flash .sub{font-size:18px;font-weight:600;max-width:32ch}
+@keyframes fl{0%{opacity:0}8%{opacity:1}75%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.flash{animation:none}}
 .zoom{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:30;display:flex;align-items:center;justify-content:center;padding:16px}
 .zoom img{max-height:100%;border-radius:8px}
 .pill{font-size:12px;color:var(--muted)}
@@ -143,7 +149,7 @@ th{background:var(--soft);font-weight:600}
 <section id="p-check" hidden>
   <div class="card">
     <h2>1　匯入未售出清單</h2>
-    <p class="hint">市集結束、確認最後幾筆交易入帳後，在電腦開後台頁面，點書籤「抓未售清單」，按「複製」，貼到下面。也可以貼任何含商品編號的文字（Excel／CSV）。</p>
+    <p class="hint">匯入後所有手機會自動拿到同一份清單（約 6 秒內）。市集結束、確認最後幾筆交易入帳後，在電腦開後台頁面，點書籤「抓未售清單」，按「複製」，貼到下面。也可以貼任何含商品編號的文字（Excel／CSV）。</p>
     <textarea id="listPaste" placeholder="I-0988-00022XP	2094749592375	14吋兒童腳踏車	2499	1200	2026-10-18 13:10:23"></textarea>
     <div class="row">
       <button class="btn pri" id="listParse" type="button">解析並儲存清單</button>
@@ -217,6 +223,7 @@ th{background:var(--soft);font-weight:600}
 </div>
 
 <div class="toast" id="toast" hidden></div>
+<div class="flash" id="flash" hidden></div>
 <div class="zoom" id="zoom" hidden><img id="zoomImg" alt="複驗照片"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -290,10 +297,26 @@ async function gasPull(){
     for(const l of S.local) if(!l.synced&&!m.has(l.pid)) m.set(l.pid,{...l,dups:[]});
     for(const s of LS.get("merged",[])) if(!m.has(s.pid)) m.set(s.pid,s);
     S.scans=m; gasOk=Date.now();
+    if(j.itemsVer && j.itemsVer!==LS.get("itemsVer","")) loadItems(j.itemsVer);
+    else if(!j.itemsVer && S.items.length && !S._pushingItems) pushItems(S.items,S.listMeta);
     $("#mode").textContent="多機同步中（Google 試算表）";
     $("#apiInfo").innerHTML=j.sheet?`已連線。掃描紀錄試算表：<a href="${esc(j.sheet)}" target="_blank" rel="noopener">開啟</a>`:"已連線。";
     render();
   }catch(e){ $("#mode").textContent="同步失敗，稍後自動重試"; $("#apiInfo").textContent="連線失敗："+(e.message||e)+"。請確認網址正確，且 Apps Script 已部署為「任何人」可存取。"; }
+}
+async function loadItems(ver){
+  try{
+    const r=await fetch(gas+(gas.includes("?")?"&":"?")+"action=items&_="+Date.now()); const j=await r.json();
+    if(!j.ok) throw new Error(j.error||"讀取清單失敗");
+    S.items=j.items||[]; S.listMeta=j.meta||null; LS.set("items",S.items); LS.set("listMeta",S.listMeta); LS.set("itemsVer",j.ver||ver);
+    render();
+  }catch(e){}
+}
+async function pushItems(rows,meta){
+  S._pushingItems=true;
+  try{ const j=await gasPost({action:"setItems",items:rows,meta}); LS.set("itemsVer",j.ver); return true }
+  catch(e){ toast("清單同步到其他手機失敗："+(e.message||e)); return false }
+  finally{ S._pushingItems=false }
 }
 function startGas(){ clearInterval(gasTimer); $("#mode").textContent="連線中…"; gasPull().then(syncLocal); gasTimer=setInterval(gasPull,6000); }
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&gas) gasPull(); });
@@ -393,7 +416,7 @@ $("#file").addEventListener("change",async e=>{
     const photo=await stampPhoto(img,sw,sh,pids);
     URL.revokeObjectURL(img.src);
     if(!pids.length){
-      pendingPhoto=photo; beep(false);
+      pendingPhoto=photo; flash("bad","✕ 讀不到","","靠近吊牌重拍，或手動輸入");
       showLast({state:"bad",title:"讀不到 QR",sub:"請靠近重拍，或在下方手動輸入編號（會沿用這張照片）",photo});
       $("#manual").focus(); return;
     }
@@ -416,7 +439,7 @@ async function recordScan(pid,photoBlob,how){
   const existing=S.scans.get(pid);
   const item=itemById(pid);
   if(existing){
-    beep(false); vib([60,60,60]);
+    flash("warn","已掃過",pid,`${existing.who||"?"} ${fmtTime(existing.t)} 掃過，不重複計數`);
     showLast({state:"warn",title:pid,sub:`已掃過（${existing.who||"?"} ${fmtTime(existing.t)}），不重複計數`+(item?`｜${item.name}`:""),photo:photoBlob});
     if(existing.device!==device && db){ try{ await db.collection("scans").doc(pid).update({dups:[...(existing.dups||[]),{who,device,t}]}) }catch(e){} }
     if(existing.device!==device && gas){ gasPost({action:"scan",pid,who,device,t,src:how||"QR"}).catch(()=>{}) }
@@ -426,8 +449,9 @@ async function recordScan(pid,photoBlob,how){
   if(photoBlob) await idbPut(pid,photoBlob);
   S.local.push({...rec,synced:false}); LS.set("myScans",S.local);
   S.scans.set(pid,{...rec,dups:[]});
-  beep(true); vib(80);
   const onList=!S.items.length?null:!!item;
+  if(onList===false) flash("warn","⚠ 不在清單",pid,"可能已售出未取貨，請放待處理區");
+  else flash("ok","✓ "+(S.scans.size),pid,item?`${item.name}｜$${item.price}`:"已記錄");
   showLast({state:onList===false?"warn":"ok",title:pid,
     sub:item?`${item.name}｜牌價 ${item.price}`:(onList===false?"⚠ 不在未售清單：可能已售出未取貨，請放待處理區":"已記錄（清單尚未匯入，之後自動比對）"),photo:photoBlob});
   render();
@@ -522,7 +546,10 @@ $("#listParse").addEventListener("click",async()=>{
       for(let i=0;i*100<rows.length;i++) await db.collection("items").doc("c"+i).set({i,rows:rows.slice(i*100,i*100+100)});
       await db.collection("meta").doc("list").set(meta);
     }catch(e){toast("儲存清單失敗："+(e.message||e));return}
-  }else{ S.items=rows; S.listMeta=meta; LS.set("items",rows); LS.set("listMeta",meta); render(); }
+  }else{
+    S.items=rows; S.listMeta=meta; LS.set("items",rows); LS.set("listMeta",meta); render();
+    if(gas){ toast("清單同步到所有手機中…"); if(!(await pushItems(rows,meta))) return; }
+  }
   $("#listPaste").value="";
   toast(`已匯入 ${rows.length} 件`+(headerCount&&headerCount!==rows.length?`（頁首寫 ${headerCount} 件，請檢查）`:""));
 });
@@ -530,7 +557,7 @@ $("#listClearAsk").addEventListener("click",()=>{$("#listClearConfirm").hidden=f
 $("#listClear").addEventListener("click",async()=>{
   $("#listClearConfirm").hidden=true;
   if(db){try{const old=await db.collection("items").get();for(const d of old.docs)await db.collection("items").doc(d.id).delete();await db.collection("meta").doc("list").delete()}catch(e){}}
-  else{S.items=[];S.listMeta=null;LS.set("items",[]);LS.set("listMeta",null);render()}
+  else{S.items=[];S.listMeta=null;LS.set("items",[]);LS.set("listMeta",null);render(); if(gas) pushItems([],null)}
 });
 
 /* merge from other phones */
@@ -724,8 +751,22 @@ document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()
 
 /* ---------- feedback ---------- */
 let actx=null;
-function beep(ok){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=ok?1320:330;g.gain.value=.12;o.connect(g);g.connect(actx.destination);o.start();o.stop(actx.currentTime+(ok?.12:.3))}catch(e){}}
+function audio(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==="suspended")actx.resume();return actx}catch(e){return null}}
+document.addEventListener("pointerdown",audio,{once:true,capture:true}); // unlock sound on first tap (iPhone)
+function tone(a,f,start,dur,type){const o=a.createOscillator(),g=a.createGain();o.type=type||"square";o.frequency.value=f;g.gain.setValueAtTime(.0001,a.currentTime+start);g.gain.exponentialRampToValueAtTime(.35,a.currentTime+start+.01);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+start+dur);o.connect(g);g.connect(a.destination);o.start(a.currentTime+start);o.stop(a.currentTime+start+dur+.02)}
+function beep(kind){const a=audio();if(!a)return;try{
+  if(kind===true||kind==="ok"){tone(a,1046,0,.09);tone(a,1568,.1,.14)}
+  else if(kind==="warn"){tone(a,880,0,.1);tone(a,880,.16,.1);tone(a,880,.32,.1)}
+  else{tone(a,220,0,.45,"sawtooth")}
+}catch(e){}}
 function vib(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+let flT=null;
+function flash(kind,big,pid,sub){
+  const f=$("#flash"); f.className="flash "+kind; f.hidden=true; void f.offsetWidth;
+  f.innerHTML=`<div class="big">${esc(big)}</div>${pid?`<div class="pid">${esc(pid)}</div>`:""}${sub?`<div class="sub">${esc(sub)}</div>`:""}`;
+  f.hidden=false; clearTimeout(flT); flT=setTimeout(()=>f.hidden=true,1300);
+  beep(kind); vib(kind==="ok"?[220]:kind==="warn"?[120,80,120,80,120]:[500]);
+}
 let tt=null;
 function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2600)}
 function zoom(u){$("#zoomImg").src=u;$("#zoom").hidden=false}

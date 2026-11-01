@@ -30,12 +30,29 @@ function folder_() {
   return f;
 }
 
+function itemsSheet_() {
+  var ss = sheet_().getParent();
+  return ss.getSheetByName('items') || ss.insertSheet('items');
+}
+
 function fmt_(t) { return Utilities.formatDate(new Date(Number(t) || Date.now()), TZ, 'MM/dd HH:mm:ss'); }
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
 /** 讀取全部掃描紀錄 */
 function doGet(e) {
   try {
+    var act = (e && e.parameter && e.parameter.action) || 'list';
+    if (act === 'items') {
+      var iv = itemsSheet_().getDataRange().getValues(), items = [];
+      for (var k = 1; k < iv.length; k++) {
+        var q = iv[k]; if (!q[0]) continue;
+        items.push({ id: String(q[0]), card: String(q[1]), name: String(q[2]),
+          orig: q[3] === '' ? null : Number(q[3]), price: q[4] === '' ? null : Number(q[4]),
+          time: String(q[5]), noTag: String(q[6]) === '吊牌未列印' });
+      }
+      var meta = null; try { meta = JSON.parse(props_().getProperty('ITEMS_META') || 'null'); } catch (e3) {}
+      return out_({ ok: true, items: items, meta: meta, ver: props_().getProperty('ITEMS_VER') || '' });
+    }
     var sh = sheet_();
     var v = sh.getDataRange().getValues();
     var rows = [];
@@ -47,7 +64,7 @@ function doGet(e) {
         dups: r[6] ? String(r[6]).split('；').map(function (s) { return { who: s }; }) : []
       });
     }
-    return out_({ ok: true, rows: rows, sheet: sh.getParent().getUrl() });
+    return out_({ ok: true, rows: rows, sheet: sh.getParent().getUrl(), itemsVer: props_().getProperty('ITEMS_VER') || '' });
   } catch (err) { return out_({ ok: false, error: String(err) }); }
 }
 
@@ -55,6 +72,25 @@ function doGet(e) {
 function doPost(e) {
   try {
     var b = JSON.parse(e.postData.contents);
+
+    if (b.action === 'setItems') {
+      var lk = LockService.getScriptLock(); lk.waitLock(20000);
+      try {
+        var ish = itemsSheet_(); ish.clear();
+        ish.getRange(1, 1, 1, 7).setValues([['商品編號', '賣家卡號', '名稱', '原價', '牌價', '上架時間', '備註']]);
+        var list = b.items || [];
+        if (list.length) {
+          var rows2 = list.map(function (i) { return [i.id, i.card || '', i.name || '', i.orig == null ? '' : i.orig, i.price == null ? '' : i.price, i.time || '', i.noTag ? '吊牌未列印' : '']; });
+          ish.getRange(2, 1, rows2.length, 2).setNumberFormat('@');
+          ish.getRange(2, 1, rows2.length, 7).setValues(rows2);
+        }
+        var ver = String(Date.now());
+        props_().setProperty('ITEMS_META', JSON.stringify(b.meta || null));
+        props_().setProperty('ITEMS_VER', ver);
+        return out_({ ok: true, ver: ver, count: list.length });
+      } finally { lk.releaseLock(); }
+    }
+
     var pid = String(b.pid || '').toUpperCase();
     if (!/^[A-Z]-\d{4}-\d{5}[A-Z0-9]{2}$/.test(pid)) return out_({ ok: false, error: '商品編號格式錯誤' });
 
