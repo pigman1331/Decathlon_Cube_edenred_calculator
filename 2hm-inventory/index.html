@@ -1,7 +1,7 @@
 <!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>內湖二手市集盤點</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Huninn&display=swap">
 <style>
 /* Layout: one-column field tool — sticky count strip on top, three tabs (掃描 / 核對 / 紀錄), big thumb-reachable scan button */
 :root{
@@ -98,6 +98,58 @@ th{background:var(--soft);font-weight:600}
 .stack{display:flex;flex-direction:column;gap:8px}
 @media (max-width:420px){.tiles{grid-template-columns:repeat(2,1fr)}.cnt b{font-size:20px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ===== candy skin: soft sky + round clouds, rolling hills, rounded candy blocks in a bright palette ===== */
+:root,:root[data-theme="dark"]{--bg:#7ccbff;--panel:#ffffff;--ink:#2b2350;--muted:#6a6290;--line:#e4defa;--accent:#ff5a7a;--accent-ink:#ffffff;--ok:#22b864;--warn:#ff9f1c;--bad:#ff4d4d;--soft:#fff3c4;--ok-soft:#dcf8e8;--warn-soft:#fff0d6;--bad-soft:#ffe1e1;--sun:#ffd23f;--grape:#8c6cff;--mint:#2ed3b7;--sky2:#b9e6ff;--sans:"Huninn","Fredoka","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;--mono:"Fredoka","Huninn",ui-rounded,sans-serif;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#7ccbff;--panel:#ffffff;--ink:#2b2350;--muted:#6a6290;--line:#e4defa;--accent:#ff5a7a;--accent-ink:#ffffff;--ok:#22b864;--warn:#ff9f1c;--bad:#ff4d4d;--soft:#fff3c4;--ok-soft:#dcf8e8;--warn-soft:#fff0d6;--bad-soft:#ffe1e1;--sun:#ffd23f;--grape:#8c6cff;--mint:#2ed3b7;--sky2:#b9e6ff;--sans:"Huninn","Fredoka","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;--mono:"Fredoka","Huninn",ui-rounded,sans-serif;color-scheme:light}}
+body{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='80'%3E%3Cg fill='%23fff'%3E%3Ccircle cx='40' cy='44' r='18'/%3E%3Ccircle cx='64' cy='34' r='24'/%3E%3Ccircle cx='92' cy='44' r='18'/%3E%3Crect x='40' y='40' width='52' height='22' rx='11'/%3E%3Ccircle cx='180' cy='58' r='11'/%3E%3Ccircle cx='196' cy='52' r='15'/%3E%3Ccircle cx='214' cy='58' r='11'/%3E%3Crect x='180' y='56' width='34' height='13' rx='6.5'/%3E%3C/g%3E%3C/svg%3E") repeat-x 0 150px/260px 80px,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='70'%3E%3Cellipse cx='50' cy='70' rx='70' ry='52' fill='%2389e07c'/%3E%3Cellipse cx='160' cy='70' rx='60' ry='38' fill='%235fd06a'/%3E%3Crect y='52' width='200' height='18' fill='%2348c25a'/%3E%3Ccircle cx='30' cy='44' r='4' fill='%23ffd23f'/%3E%3Ccircle cx='150' cy='46' r='4' fill='%23ff8fb1'/%3E%3Ccircle cx='110' cy='60' r='3' fill='%23fff'/%3E%3C/svg%3E") repeat-x left bottom/200px 70px,linear-gradient(var(--bg),var(--sky2)) var(--bg);font-family:var(--sans);min-height:100vh;letter-spacing:.02em}
+body::before{background:#fff}
+header{background:#fff;border-bottom:0;box-shadow:0 6px 0 rgba(43,35,80,.08);border-radius:0 0 24px 24px}
+h1{font-size:19px;color:var(--ink)}
+h1::before{content:"✿ ";color:var(--accent)}
+.mode{color:var(--muted);background:var(--ok-soft);padding:2px 10px;border-radius:999px;font-size:11px}
+.cnt{border-radius:18px;padding:8px 12px;box-shadow:0 5px 0 rgba(0,0,0,.14);color:#fff}
+.cnt:nth-child(1){background:var(--grape)}
+.cnt:nth-child(2){background:var(--accent)}
+.cnt:nth-child(3){background:var(--mint)}
+.cnt b{font-family:var(--mono);font-weight:700;font-size:26px;color:#fff;line-height:1.15}
+.cnt span{color:#fff;opacity:.92}
+nav{gap:6px;padding-bottom:10px}
+nav button{border-radius:999px;border-bottom:0;padding:8px 6px;color:var(--muted);background:#f3f0ff}
+nav button[aria-selected="true"]{background:var(--sun);color:var(--ink);box-shadow:0 4px 0 #e0a800}
+.card{border-radius:24px;border:0;box-shadow:0 8px 0 rgba(43,35,80,.10)}
+.card h2{font-size:17px}
+input[type=text],textarea,select{border-radius:14px;border:2px solid var(--line);background:#faf9ff;font-family:var(--sans)}
+textarea{font-family:var(--sans)}
+.btn{border-radius:999px;border:0;background:#f3f0ff;color:var(--ink);box-shadow:0 5px 0 #d8d0fa;font-family:var(--sans);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(5px);box-shadow:0 0 0 transparent}
+.btn.pri{background:var(--ok);color:#fff;box-shadow:0 5px 0 #168a4a}
+.btn.danger{background:var(--bad-soft);color:var(--bad);box-shadow:0 5px 0 #ffb3b3}
+#liveBtn{background:var(--sun);box-shadow:0 6px 0 #e0a800;font-size:18px;padding-block:16px}
+.shoot{border-radius:28px;background:linear-gradient(180deg,#ff7a94,var(--accent));box-shadow:0 8px 0 #d63a5c,inset 0 4px 0 rgba(255,255,255,.35);font-family:var(--sans);font-size:24px;transition:transform .08s,box-shadow .08s}
+.shoot:active{transform:translateY(8px);box-shadow:0 0 0 #d63a5c,inset 0 4px 0 rgba(255,255,255,.35)}
+.last{border-radius:20px;border:0;box-shadow:0 5px 0 rgba(43,35,80,.10)}
+.last.ok{background:var(--ok-soft)} .last.warn{background:var(--warn-soft)} .last.bad{background:var(--bad-soft)}
+.last img,.it img,.it .noimg{border-radius:14px}
+.pid{font-family:var(--mono);font-weight:600;letter-spacing:.02em}
+.st{border-radius:999px}
+.tiles{gap:10px}
+.tile{border-radius:18px;border:0;color:#fff;box-shadow:0 5px 0 rgba(0,0,0,.15)}
+.tile span{color:#fff;opacity:.95}
+.tile b,.tile.bad b,.tile.warn b,.tile.ok b{color:#fff;font-family:var(--mono);font-weight:700;font-size:26px}
+.tile.bad{background:var(--bad)} .tile.warn{background:var(--warn)} .tile.ok{background:var(--ok)} .tile:not(.bad):not(.warn):not(.ok){background:var(--grape)}
+.tile[aria-pressed="true"]{border:0;outline:4px solid var(--sun);outline-offset:2px;transform:translateY(-3px)}
+.list{border-top:2px dashed var(--line)} .it{border-bottom:2px dashed var(--line)}
+.tbl{border-radius:16px;border:2px solid var(--line)}
+th{background:#f3f0ff;color:var(--ink)}
+.toast{border-radius:999px;background:var(--ink);color:#fff;box-shadow:0 5px 0 rgba(0,0,0,.2)}
+.flash{border-radius:0}
+.flash.ok{background:rgba(34,184,100,.94)} .flash.warn{background:rgba(255,159,28,.95)} .flash.bad{background:rgba(255,77,77,.95)}
+.flash .big{font-family:var(--sans);font-size:64px;animation:pop .45s cubic-bezier(.3,1.6,.5,1) both}
+.flash .pid{font-size:22px}
+@keyframes pop{0%{transform:scale(.3)}100%{transform:scale(1)}}
+@media (max-width:420px){.cnt b,.tile b,.tile.bad b,.tile.warn b,.tile.ok b{font-size:22px}h1{font-size:17px}}
+@media (prefers-reduced-motion:reduce){.flash .big{animation:none}}
 </style>
 
 <header><div class="in">
@@ -755,7 +807,7 @@ function audio(){try{actx=actx||new (window.AudioContext||window.webkitAudioCont
 document.addEventListener("pointerdown",audio,{once:true,capture:true}); // unlock sound on first tap (iPhone)
 function tone(a,f,start,dur,type){const o=a.createOscillator(),g=a.createGain();o.type=type||"square";o.frequency.value=f;g.gain.setValueAtTime(.0001,a.currentTime+start);g.gain.exponentialRampToValueAtTime(.35,a.currentTime+start+.01);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+start+dur);o.connect(g);g.connect(a.destination);o.start(a.currentTime+start);o.stop(a.currentTime+start+dur+.02)}
 function beep(kind){const a=audio();if(!a)return;try{
-  if(kind===true||kind==="ok"){tone(a,1046,0,.09);tone(a,1568,.1,.14)}
+  if(kind===true||kind==="ok"){tone(a,1046,0,.06);tone(a,1319,.06,.06);tone(a,1568,.12,.06);tone(a,2093,.18,.14)}
   else if(kind==="warn"){tone(a,880,0,.1);tone(a,880,.16,.1);tone(a,880,.32,.1)}
   else{tone(a,220,0,.45,"sawtooth")}
 }catch(e){}}
