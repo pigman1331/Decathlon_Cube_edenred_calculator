@@ -150,18 +150,29 @@ th{background:#f3f0ff;color:var(--ink)}
 @keyframes pop{0%{transform:scale(.3)}100%{transform:scale(1)}}
 @media (max-width:420px){.cnt b,.tile b,.tile.bad b,.tile.warn b,.tile.ok b{font-size:22px}h1{font-size:17px}}
 @media (prefers-reduced-motion:reduce){.flash .big{animation:none}}
+.seg{display:flex;gap:10px}
+.seg .btn{flex:1;font-size:16px;padding-block:12px}
+.seg .btn[aria-pressed="true"]{background:var(--accent);color:#fff;box-shadow:0 5px 0 #d63a5c}
+body.don .seg .btn[aria-pressed="true"]{background:var(--grape);box-shadow:0 5px 0 #6a4fd6}
+body.don .shoot{background:linear-gradient(180deg,#a58bff,var(--grape));box-shadow:0 8px 0 #6a4fd6,inset 0 4px 0 rgba(255,255,255,.35)}
+body.don .shoot:active{box-shadow:0 0 0 #6a4fd6,inset 0 4px 0 rgba(255,255,255,.35)}
+.modeNote{margin:0;font-size:13px;color:var(--muted)}
+body.don .modeNote{color:var(--grape);font-weight:700}
+#donTiles{grid-template-columns:repeat(3,1fr)}
+@media (max-width:420px){#donTiles{grid-template-columns:repeat(3,1fr)}#donTiles .tile b{font-size:20px}}
 </style>
 
 <header><div class="in">
   <div class="top"><h1>內湖二手市集盤點</h1><span class="mode" id="mode">連線中…</span></div>
   <div class="counts">
-    <div class="cnt"><b id="cAll">0</b><span>全部已掃</span></div>
-    <div class="cnt me"><b id="cMe">0</b><span>本機已掃</span></div>
-    <div class="cnt"><b id="cList">–</b><span>未售清單</span></div>
+    <div class="cnt"><b id="cAll">0</b><span id="lAll">全部已掃</span></div>
+    <div class="cnt me"><b id="cMe">0</b><span id="lMe">本機已掃</span></div>
+    <div class="cnt"><b id="cList">–</b><span id="lList">未售清單</span></div>
   </div>
   <nav role="tablist">
     <button role="tab" id="t-scan" aria-selected="true" data-tab="scan">掃描</button>
     <button role="tab" id="t-check" aria-selected="false" data-tab="check">核對・填單</button>
+    <button role="tab" id="t-don" aria-selected="false" data-tab="don">捐贈</button>
     <button role="tab" id="t-log" aria-selected="false" data-tab="log">紀錄</button>
   </nav>
 </div></header>
@@ -169,6 +180,13 @@ th{background:#f3f0ff;color:var(--ink)}
 <div class="wrap">
 <!-- ============ 掃描 ============ -->
 <section id="p-scan">
+  <div class="card">
+    <div class="seg" role="group" aria-label="掃描模式">
+      <button class="btn" id="modeInv" type="button" aria-pressed="true">盤點</button>
+      <button class="btn" id="modeDon" type="button" aria-pressed="false">捐贈清點</button>
+    </div>
+    <p class="modeNote" id="modeNote">盤點模式：掃描結果和未售清單比對。</p>
+  </div>
   <div class="card" id="whoCard">
     <div class="row">
       <label>這支手機負責區域／人員<input type="text" id="who" placeholder="例：A區 帳篷 小黑"></label>
@@ -250,6 +268,36 @@ th{background:#f3f0ff;color:var(--ink)}
   </div>
 </section>
 
+<!-- ============ 捐贈 ============ -->
+<section id="p-don" hidden>
+  <div class="card">
+    <h2>1　匯入已售出清單</h2>
+    <p class="hint">客人未取的商品都是「已售出」的，所以要用已售出清單來對照名稱和賣家。在電腦開後台頁面，點書籤「抓已售清單」，按「複製」，貼到下面。匯入後所有手機會自動拿到。</p>
+    <textarea id="catPaste" placeholder="I-0988-01057MQ	2094571722667	兒童三輪滑板車	1200	400	2026-10-29 15:02"></textarea>
+    <div class="row">
+      <button class="btn pri" id="catParse" type="button">解析並儲存已售清單</button>
+    </div>
+    <p class="hint" id="catInfo">尚未匯入已售清單。</p>
+  </div>
+
+  <div class="card">
+    <h2>2　捐贈清單</h2>
+    <p class="hint">到「掃描」頁切換成「捐贈清點」後掃描的商品，會列在這裡。</p>
+    <div class="tiles" id="donTiles">
+      <button class="tile ok" data-f="sold" aria-pressed="true"><b id="dSold">0</b><span>已售未取（可捐）</span></button>
+      <button class="tile warn" data-f="unsold" aria-pressed="false"><b id="dUnsold">0</b><span>未售出（應退賣家）</span></button>
+      <button class="tile bad" data-f="unknown" aria-pressed="false"><b id="dUnknown">0</b><span>查無資料</span></button>
+    </div>
+    <input type="text" id="dq" placeholder="搜尋編號、名稱、賣家卡號">
+    <div class="list" id="donList"></div>
+    <div class="row">
+      <button class="btn pri" id="donXlsx" type="button">下載 Excel</button>
+      <button class="btn" id="donCopy" type="button">複製表格</button>
+    </div>
+    <p class="hint">Excel 會列出全部掃到的商品，三種狀態都在「狀態」欄，可直接篩選。</p>
+  </div>
+</section>
+
 <!-- ============ 紀錄 ============ -->
 <section id="p-log" hidden>
   <div class="card" id="apiCard" hidden>
@@ -310,7 +358,11 @@ const S={
   issues:{},          // pid -> {reason,note,excl}
   report:{store:"",dkt:""},
   local:LS.get("myScans",[]), // own scans [{pid,who,device,t,photo,synced}]
-  filter:"missing", tab:"scan"
+  filter:"missing", tab:"scan",
+  mode:LS.get("mode","inv"),   // inv = 盤點, don = 捐贈清點
+  don:new Map(),               // donate scans pid -> rec
+  donLocal:LS.get("donLocal",[]),
+  cat:LS.get("cat",[]), catMeta:LS.get("catMeta",null), dfilter:"sold"
 };
 let db=null, assets=null, downloads=null;
 /* gas = Google Apps Script web app used when this page is hosted outside Claude (GitHub Pages) */
@@ -332,7 +384,7 @@ let gas=null, gasTimer=null, gasOk=null;
     loadLocalMode();
     if(gas) startGas(); else $("#mode").textContent="單機模式（未同步）";
   }
-  render();
+  setMode(S.mode);
 })();
 
 async function gasPost(body){
@@ -350,6 +402,8 @@ async function gasPull(){
     for(const s of LS.get("merged",[])) if(!m.has(s.pid)) m.set(s.pid,s);
     S.scans=m; gasOk=Date.now();
     if(j.itemsVer && j.itemsVer!==LS.get("itemsVer","")) loadItems(j.itemsVer);
+    if(j.catVer && j.catVer!==LS.get("catVer","")) loadCat(j.catVer);
+    if(S.mode==="don"||S.tab==="don") await pullDon();
     else if(!j.itemsVer && S.items.length && !S._pushingItems) pushItems(S.items,S.listMeta);
     $("#mode").textContent="多機同步中（Google 試算表）";
     $("#apiInfo").innerHTML=j.sheet?`已連線。掃描紀錄試算表：<a href="${esc(j.sheet)}" target="_blank" rel="noopener">開啟</a>`:"已連線。";
@@ -362,6 +416,22 @@ async function loadItems(ver){
     if(!j.ok) throw new Error(j.error||"讀取清單失敗");
     S.items=j.items||[]; S.listMeta=j.meta||null; LS.set("items",S.items); LS.set("listMeta",S.listMeta); LS.set("itemsVer",j.ver||ver);
     render();
+  }catch(e){}
+}
+async function pullDon(){
+  try{
+    const r=await fetch(gas+(gas.includes("?")?"&":"?")+"action=list&list=donate&_="+Date.now()); const j=await r.json();
+    if(!j.ok) return;
+    const m=new Map(); for(const s of j.rows) m.set(s.pid,{...s,dups:s.dups||[]});
+    for(const l of S.donLocal) if(!l.synced&&!m.has(l.pid)) m.set(l.pid,{...l,dups:[]});
+    S.don=m;
+  }catch(e){}
+}
+async function loadCat(ver){
+  try{
+    const r=await fetch(gas+(gas.includes("?")?"&":"?")+"action=items&target=catalog&_="+Date.now()); const j=await r.json();
+    if(!j.ok) return;
+    S.cat=j.items||[]; S.catMeta=j.meta||null; LS.set("cat",S.cat); LS.set("catMeta",S.catMeta); LS.set("catVer",j.ver||ver); render();
   }catch(e){}
 }
 async function pushItems(rows,meta){
@@ -389,6 +459,7 @@ function loadLocalMode(){
   S.report=LS.get("report",{store:"",dkt:""});
   for(const s of LS.get("merged",[])) addScanToMap(s);
   for(const s of S.local) addScanToMap(s);
+  for(const s of S.donLocal) S.don.set(s.pid,{...s,dups:[]});
 }
 function addScanToMap(s){
   const cur=S.scans.get(s.pid);
@@ -487,6 +558,7 @@ function manualAdd(){
 }
 
 async function recordScan(pid,photoBlob,how){
+  if(S.mode==="don") return recordDonate(pid,photoBlob,how);
   const t=Date.now(), who=whoName();
   const existing=S.scans.get(pid);
   const item=itemById(pid);
@@ -530,7 +602,121 @@ async function pushScan(rec,photoBlob){
 async function syncLocal(){
   if(!db&&!gas)return;
   for(const r of S.local.filter(x=>!x.synced)){ const b=await idbGet(r.pid); await pushScan({...r},b); }
+  if(gas) for(const r of S.donLocal.filter(x=>!x.synced)){ const b=await idbGet("don:"+r.pid); await pushDonate({...r},b); }
 }
+
+/* ---------- 捐贈清點 ---------- */
+function catById(pid){ if(!S._cidx||S._cidxN!==S.cat){S._cidx=new Map(S.cat.map(i=>[i.id,i]));S._cidxN=S.cat} return S._cidx.get(pid); }
+function donStatus(pid){ if(catById(pid)) return "sold"; if(itemById(pid)) return "unsold"; return "unknown"; }
+function donInfo(pid){ return catById(pid)||itemById(pid)||null; }
+const DON_LABEL={sold:"已售未取",unsold:"未售出",unknown:"查無資料"};
+async function recordDonate(pid,photoBlob,how){
+  const t=Date.now(), who=whoName();
+  const ex=S.don.get(pid), it=donInfo(pid), st=donStatus(pid);
+  if(ex){
+    flash("warn","已掃過",pid,`${ex.who||"?"} ${fmtTime(ex.t)} 掃過，不重複計數`);
+    showLast({state:"warn",title:pid,sub:`捐贈清點：已掃過（${ex.who||"?"}）`+(it?`｜${it.name}`:""),photo:photoBlob});
+    return;
+  }
+  const rec={pid,who,device,t,src:how||"QR"};
+  if(photoBlob) await idbPut("don:"+pid,photoBlob);
+  S.donLocal.push({...rec,synced:false}); LS.set("donLocal",S.donLocal);
+  S.don.set(pid,{...rec,dups:[]});
+  if(st==="sold") flash("ok","✓ 捐 "+S.don.size,pid,it?`${it.name}｜賣家 ${it.card}`:"已記錄");
+  else if(st==="unsold") flash("warn","⚠ 未售出",pid,"這件沒賣掉，應退給賣家，先放一旁");
+  else flash("warn",S.cat.length?"⚠ 查無資料":"✓ 捐 "+S.don.size,pid,S.cat.length?"已記錄，事後再查":"已記錄（已售清單尚未匯入，之後自動比對）");
+  showLast({state:st==="sold"||!S.cat.length?"ok":"warn",title:pid,sub:"捐贈｜"+(it?`${it.name}｜${DON_LABEL[st]}`:DON_LABEL[st]),photo:photoBlob});
+  render();
+  pushDonate(rec,photoBlob);
+}
+async function pushDonate(rec,photoBlob){
+  if(!gas) return;
+  try{
+    const photo=photoBlob?await blobToB64(photoBlob):null;
+    await gasPost({action:"scan",list:"donate",pid:rec.pid,who:rec.who,device:rec.device,t:rec.t,src:rec.src,photo});
+    const l=S.donLocal.find(x=>x.pid===rec.pid&&x.t===rec.t); if(l){l.synced=true;LS.set("donLocal",S.donLocal)}
+  }catch(e){}
+}
+function setMode(m){
+  S.mode=m; LS.set("mode",m);
+  document.body.classList.toggle("don",m==="don");
+  $("#modeInv").setAttribute("aria-pressed",m==="inv"?"true":"false");
+  $("#modeDon").setAttribute("aria-pressed",m==="don"?"true":"false");
+  $("#modeNote").textContent=m==="don"?"捐贈清點模式：掃到的商品會列進「捐贈」清單，不會影響盤點。":"盤點模式：掃描結果和未售清單比對。";
+  $("#lAll").textContent=m==="don"?"捐贈已掃":"全部已掃";
+  $("#lList").textContent=m==="don"?"已售清單":"未售清單";
+  if(gas&&m==="don") pullDon().then(render); else render();
+}
+$("#modeInv").addEventListener("click",()=>setMode("inv"));
+$("#modeDon").addEventListener("click",()=>setMode("don"));
+$("#catParse").addEventListener("click",async()=>{
+  const {rows}=parseList($("#catPaste").value);
+  if(!rows.length){toast("沒找到任何商品編號");return}
+  const meta={count:rows.length,at:Date.now(),by:whoName()};
+  S.cat=rows; S.catMeta=meta; LS.set("cat",rows); LS.set("catMeta",meta); render();
+  if(gas){ toast("已售清單同步到所有手機中…");
+    try{ const j=await gasPost({action:"setItems",target:"catalog",items:rows,meta}); LS.set("catVer",j.ver) }catch(e){ toast("同步失敗："+(e.message||e)); return } }
+  $("#catPaste").value=""; toast(`已匯入已售清單 ${rows.length} 件`);
+});
+function donRows(){
+  return [...S.don.values()].sort((a,b)=>a.t-b.t).map(s=>{const it=donInfo(s.pid);return {s,it,st:donStatus(s.pid)}});
+}
+function renderDon(){
+  const rows=donRows();
+  $("#catInfo").textContent=S.catMeta?`目前已售清單 ${S.cat.length} 件（${fmtTime(S.catMeta.at,true)} 由 ${S.catMeta.by||"?"} 匯入）`:"尚未匯入已售清單。";
+  $("#dSold").textContent=rows.filter(r=>r.st==="sold").length;
+  $("#dUnsold").textContent=rows.filter(r=>r.st==="unsold").length;
+  $("#dUnknown").textContent=rows.filter(r=>r.st==="unknown").length;
+  if(S.tab!=="don") return;
+  const q=$("#dq").value.trim().toUpperCase();
+  let list=rows.filter(r=>r.st===S.dfilter);
+  if(q) list=list.filter(r=>(r.s.pid+" "+(r.it?r.it.name+" "+r.it.card:"")).toUpperCase().includes(q));
+  const box=$("#donList"); box.innerHTML="";
+  for(const r of list.slice(0,300)){
+    const d=document.createElement("div"); d.className="it"; const it=r.it,s=r.s;
+    d.innerHTML=`<div class="noimg">…</div><div class="b"><div><span class="pid">${esc(s.pid)}</span></div>
+      ${it?`<div>${esc(it.name)}</div><div class="meta">賣家 ${esc(it.card)}｜原價 ${esc(it.orig??"–")}｜牌價 ${esc(it.price??"–")}</div>`:""}
+      <div class="meta">${esc(s.who)} ${fmtTime(s.t,true)}</div>
+      ${s.device===device?`<div class="ctl"><button class="btn" type="button">刪除這筆</button></div>`:""}</div>`;
+    box.appendChild(d);
+    const del=d.querySelector("button");
+    if(del) del.addEventListener("click",async()=>{
+      if(del.dataset.arm!=="1"){del.dataset.arm="1";del.textContent="再按一次確認刪除";del.classList.add("danger");return}
+      S.donLocal=S.donLocal.filter(x=>x.pid!==s.pid); LS.set("donLocal",S.donLocal); S.don.delete(s.pid);
+      if(gas){try{await gasPost({action:"delete",list:"donate",pid:s.pid,device})}catch(e){toast("伺服器刪除失敗，請稍後再試")}}
+      render(); toast("已刪除 "+s.pid);
+    });
+    (async()=>{const b=await idbGet("don:"+s.pid);const u=b?URL.createObjectURL(b):(s.photoUrl||null);const ph=d.firstChild;
+      if(u){const im=document.createElement("img");im.src=u;im.alt="照片";im.addEventListener("click",()=>zoom(u));ph.replaceWith(im)}else ph.textContent="無照片"})();
+  }
+  if(!list.length) box.innerHTML=`<p class="hint" style="padding:10px 0">${rows.length?"這個分類沒有商品。":"還沒有捐贈掃描。到「掃描」頁切換成「捐贈清點」開始掃。"}</p>`;
+}
+document.querySelectorAll("#donTiles .tile").forEach(b=>b.addEventListener("click",()=>{
+  S.dfilter=b.dataset.f; document.querySelectorAll("#donTiles .tile").forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false")); renderDon();
+}));
+$("#dq").addEventListener("input",renderDon);
+const DON_HEAD=["序號","商品編號","商品名稱","賣家卡號","原價","牌價","狀態","掃描人","掃描時間","照片"];
+function donTable(){
+  return donRows().map((r,i)=>[i+1,r.s.pid,r.it?r.it.name:"",r.it?r.it.card:"",r.it&&r.it.orig!=null?r.it.orig:"",r.it&&r.it.price!=null?r.it.price:"",DON_LABEL[r.st],r.s.who||"",fmtTime(r.s.t,true),r.s.photoUrl||""]);
+}
+$("#donCopy").addEventListener("click",()=>{
+  const rows=donTable(); if(!rows.length){toast("還沒有捐贈掃描");return}
+  const tsv=[DON_HEAD,...rows].map(r=>r.map(c=>String(c).replace(/[\t\n]/g," ")).join("\t")).join("\n");
+  navigator.clipboard.writeText(tsv).then(()=>toast(`已複製 ${rows.length} 列`)).catch(()=>toast("無法直接複製，請改用下載 Excel"));
+});
+$("#donXlsx").addEventListener("click",async()=>{
+  const rows=donTable(); if(!rows.length){toast("還沒有捐贈掃描");return}
+  if(!window.XLSX){toast("Excel 元件沒載入，請改用複製表格");return}
+  const ws=XLSX.utils.aoa_to_sheet([DON_HEAD,...rows]); ws["!cols"]=[6,18,32,16,8,8,10,14,16,40].map(w=>({wch:w}));
+  ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:DON_HEAD.length-1}})};
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"捐贈清單");
+  const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  const name=`內湖店_二手市集未取商品捐贈清單_${new Date().toISOString().slice(0,10)}.xlsx`;
+  const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  if(downloads){try{await downloads.save({filename:name,data:blob});return}catch(e){if(e&&e.code==="cancelled")return}}
+  if(!window.claude){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();toast(`已下載 ${rows.length} 件`);return}
+  toast("這個檢視不能下載檔案，請改用「複製表格」");
+});
 $("#resync").addEventListener("click",async()=>{
   if(!db&&!gas){toast("單機模式無法上傳，請用「複製本機編號」傳給總召");return}
   S.local.forEach(r=>{ if(!S.scans.has(r.pid)) r.synced=false }); await syncLocal(); toast("已重新上傳");
@@ -702,9 +888,16 @@ function showLast({state,title,sub,photo}){
   box.prepend(d); while(box.children.length>4) box.lastChild.remove();
 }
 function render(){
-  $("#cAll").textContent=S.scans.size;
-  $("#cMe").textContent=[...S.scans.values()].filter(s=>s.device===device).length;
-  $("#cList").textContent=S.items.length||"–";
+  if(S.mode==="don"){
+    $("#cAll").textContent=S.don.size;
+    $("#cMe").textContent=[...S.don.values()].filter(s=>s.device===device).length;
+    $("#cList").textContent=S.cat.length||"–";
+  }else{
+    $("#cAll").textContent=S.scans.size;
+    $("#cMe").textContent=[...S.scans.values()].filter(s=>s.device===device).length;
+    $("#cList").textContent=S.items.length||"–";
+  }
+  renderDon();
   const lm=S.listMeta;
   $("#listInfo").textContent=lm?`目前清單 ${S.items.length} 件（${fmtTime(lm.at,true)} 由 ${lm.by||"?"} 匯入${lm.headerCount?`；頁首商品數量 ${lm.headerCount}`:""}）`:"尚未匯入清單。";
   if(document.activeElement!==$("#storeNo")) $("#storeNo").value=S.report.store||"";
@@ -797,8 +990,9 @@ document.querySelectorAll("#tiles .tile").forEach(b=>b.addEventListener("click",
 }));
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{
   S.tab=b.dataset.tab; document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x===b?"true":"false"));
-  for(const t of ["scan","check","log"]) $("#p-"+t).hidden=t!==S.tab;
-  if(S.tab!=="scan"&&stream) stopLive(); render();
+  for(const t of ["scan","check","don","log"]) $("#p-"+t).hidden=t!==S.tab;
+  if(S.tab!=="scan"&&stream) stopLive();
+  if(S.tab==="don"&&gas) pullDon().then(render); else render();
 }));
 
 /* ---------- feedback ---------- */
